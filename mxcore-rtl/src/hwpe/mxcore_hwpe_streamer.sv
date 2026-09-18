@@ -102,7 +102,8 @@ module mxcore_hwpe_streamer
 
   hci_core_intf #(
   `ifndef SYNTHESIS
-    .WAIVE_RQ4_ASSERT (    1'b1 ),
+    .WAIVE_RQ4_ASSERT  (    1'b1 ),
+    .WAIVE_RSP3_ASSERT (    1'b1 ),
   `endif
     .DW  ( HCI_SIZE_tcdm_dw.DW  ),
     .AW  ( HCI_SIZE_tcdm_dw.AW  ),
@@ -117,7 +118,8 @@ module mxcore_hwpe_streamer
 
   hci_core_intf #(
   `ifndef SYNTHESIS
-    .WAIVE_RQ4_ASSERT (    1'b1 ),
+    .WAIVE_RQ4_ASSERT  (    1'b1 ),
+    .WAIVE_RSP3_ASSERT (    1'b1 ),
   `endif
     .DW  ( HCI_SIZE_tcdm_dw.DW  ),
     .AW  ( HCI_SIZE_tcdm_dw.AW  ),
@@ -132,7 +134,8 @@ module mxcore_hwpe_streamer
 
   hci_core_intf #(
   `ifndef SYNTHESIS
-    .WAIVE_RQ4_ASSERT (    1'b1 ),
+    .WAIVE_RQ4_ASSERT  (    1'b1 ),
+    .WAIVE_RSP3_ASSERT (    1'b1 ),
   `endif
     .DW  ( HCI_SIZE_tcdm_dw.DW  ),
     .AW  ( HCI_SIZE_tcdm_dw.AW  ),
@@ -147,7 +150,8 @@ module mxcore_hwpe_streamer
 
   hci_core_intf #(
   `ifndef SYNTHESIS
-    .WAIVE_RQ4_ASSERT (    1'b1 ),
+    .WAIVE_RQ4_ASSERT  (    1'b1 ),
+    .WAIVE_RSP3_ASSERT (    1'b1 ),
   `endif
     .DW  ( HCI_SIZE_tcdm_dw.DW  ),
     .AW  ( HCI_SIZE_tcdm_dw.AW  ),
@@ -162,7 +166,8 @@ module mxcore_hwpe_streamer
 
   hci_core_intf #(
   `ifndef SYNTHESIS
-    .WAIVE_RQ4_ASSERT (    1'b1 ),
+    .WAIVE_RQ4_ASSERT  (    1'b1 ),
+    .WAIVE_RSP3_ASSERT (    1'b1 ),
   `endif
     .DW  ( HCI_SIZE_tcdm_dw.DW  ),
     .AW  ( HCI_SIZE_tcdm_dw.AW  ),
@@ -177,7 +182,8 @@ module mxcore_hwpe_streamer
 
   hci_core_intf #(
   `ifndef SYNTHESIS
-    .WAIVE_RQ4_ASSERT (    1'b1 ),
+    .WAIVE_RQ4_ASSERT  (    1'b1 ),
+    .WAIVE_RSP3_ASSERT (    1'b1 ),
   `endif
     .DW  ( HCI_SIZE_tcdm_dw.DW  ),
     .AW  ( HCI_SIZE_tcdm_dw.AW  ),

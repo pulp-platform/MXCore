@@ -543,7 +543,8 @@ def write_to_c_header(fp9_matrix_a, fp9_matrix_b, scale_matrix_a, scale_matrix_b
 
     with open(header_path, "w") as f:
         f.write("#pragma once\n\n")
-        f.write("#define inf INFINITY\n\n")
+        f.write("#define inf INFINITY\n")
+        f.write("#define nan NAN\n\n")
         f.write(f"#define PRELOAD {1 if preload_matrix is not None else 0}\n")
         f.write(f"#define A_SIZE {A_SIZE}\n")
         f.write(f"#define B_SIZE {B_SIZE}\n")
