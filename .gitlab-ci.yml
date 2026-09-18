@@ -1,0 +1,23 @@
+stages:
+  - test
+
+default:
+  interruptible: true
+
+variables:
+  GIT_SUBMODULE_STRATEGY: none
+
+regression:
+  stage: test
+  script:
+    - uv --cache-dir $CACHEDIR/uv venv --python 3.11 $HOME/.pygolden-venv
+    - uv pip install --python $HOME/.pygolden-venv mpmath numpy
+    - export PATH="$HOME/.pygolden-venv/bin:$PATH"
+    - make bender
+    - export PATH="$CI_PROJECT_DIR/install/bender:$PATH"
+    - python3 PyGolden/run_tests.py --tag ci
+  artifacts:
+    when: always
+    paths:
+      - work/regression/workdirs/*/sim.log
+    expire_in: 2 weeks

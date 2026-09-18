@@ -1,0 +1,70 @@
+# Copyright 2026 ETH Zurich and University of Bologna.
+# Solderpad Hardware License, Version 0.51, see LICENSE for details.
+# SPDX-License-Identifier: SHL-0.51
+#
+# Jayanth Jonnalagadda <jjonnalagadd@iis.ee.ethz.ch>
+
+package:
+  name: MXCore
+  authors:
+    - Jayanth Jonnalagadda <jjonnalagadd@iis.ee.ethz.ch>
+    - Gamze Islamoglu <gislamoglu@iis.ee.ethz.ch>
+
+dependencies:
+  FPnew:              { git: https://github.com/pulp-platform/cvfpu.git,              rev:      mxcore          }
+  common_cells:       { git: https://github.com/pulp-platform/common_cells.git,       version:  2.0.0-beta.2    }
+  hci:                { git: https://github.com/pulp-platform/hci.git,                rev:      master          }
+  hwpe-ctrl:          { git: https://github.com/pulp-platform/hwpe-ctrl,              rev:      master          }
+  hwpe-stream:        { git: https://github.com/pulp-platform/hwpe-stream.git,        rev:      master          }
+  scm:                { git: https://github.com/pulp-platform/scm.git,                rev:      master          }
+  tech_cells_generic: { git: https://github.com/pulp-platform/tech_cells_generic,     version:  0.2.14          }
+
+frozen: false
+
+sources:
+  - defines:
+      VECTOR_SIZE: 32
+      NPE: 32
+      REUSE: 64
+      NUM_PIPE_REGS: 4
+      TCDM_BW: 512
+      EN_FP8: 1
+      EN_FP8ALT: 1
+      EN_FP6: 0
+      EN_FP6ALT: 0
+      EN_FP4: 1
+    files:
+      - mxcore-rtl/src/mxcore_package.sv
+      - mxcore-rtl/src/mxcore_mxdotp_array.sv
+      - mxcore-rtl/src/mxcore_register_file_1r_1w_1row.sv
+      - mxcore-rtl/src/mxcore_reuse_counters.sv
+      - mxcore-rtl/src/mxcore_global_output_buffer.sv
+      - mxcore-rtl/src/mxcore_engine.sv
+    # MXCore HWPE Sources
+      - target: mxcore_hwpe
+        files:
+          - mxcore-rtl/src/hwpe/fp32_to_mxfp8_quantizer.sv
+          - mxcore-rtl/src/hwpe/block_scale.sv
+          - mxcore-rtl/src/hwpe/mxcore_hwpe_result_quantizer.sv
+          - mxcore-rtl/src/hwpe/mxcore_hwpe_block_quantizer.sv
+          - mxcore-rtl/src/hwpe/mxcore_hwpe_package.sv
+          - mxcore-rtl/src/hwpe/mxcore_hwpe_engine.sv
+          - mxcore-rtl/src/hwpe/mxcore_hwpe_streamer.sv
+          - mxcore-rtl/src/hwpe/mxcore_hwpe_ctrl.sv
+          - mxcore-rtl/src/hwpe/mxcore_hwpe_fifo_buffer.sv
+          - mxcore-rtl/src/hwpe/mxcore_hwpe_fifo_scale_buffer.sv
+          - mxcore-rtl/src/hwpe/mxcore_hwpe_multi_fifo_buffer.sv
+          - mxcore-rtl/src/hwpe/mxcore_hwpe_multi_fifo_scale_buffer.sv
+          - mxcore-rtl/src/hwpe/mxcore_hwpe_result_fifo_buffer.sv
+          - mxcore-rtl/src/hwpe/mxcore_hwpe_result_scale_fifo_buffer.sv
+          - mxcore-rtl/src/hwpe/mxcore_hwpe_input_fence.sv
+          - mxcore-rtl/src/hwpe/mxcore_hwpe_top.sv
+          - mxcore-rtl/src/hwpe/mxcore_hwpe_wrap.sv
+
+# TB Sources
+  - target: mxcore_hwpe_test
+    files:
+      - mxcore-rtl/tb/util/rst_gen.sv
+      - mxcore-rtl/tb/util/clk_rst_gen.sv
+      - mxcore-rtl/tb/hwpe/tb_dummy_memory.sv
+      - mxcore-rtl/tb/hwpe/tb_mxcore_hwpe.sv

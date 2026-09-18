@@ -1,0 +1,20 @@
+name: gitlab-ci
+
+on: [ push, pull_request, workflow_dispatch ]
+
+jobs:
+  gitlab-ci:
+    name: Mirror and check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Gitlab CI
+        uses: pulp-platform/pulp-actions/gitlab-ci@v2.5.1 # update version as needed, not autoupdated
+        # Skip on forks or pull requests from forks due to missing secrets.
+        if: github.repository == 'pulp-platform/MXCore' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        with:
+          domain: iis-git.ee.ethz.ch
+          repo: github-mirror/mxcore
+          token: ${{ secrets.GITLAB_TOKEN }}
+          # Poll every 30s for 30 minutes
+          poll-period: 30
+          poll-count: 60

@@ -1,0 +1,2147 @@
+{
+  "defaults": {
+    "block_size": 32,
+    "num_pipe_regs": 4,
+    "tcdm_bw": 512,
+    "prob_stall": 10,
+    "timeout_seconds": 120
+  },
+  "tests": [
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 64,
+      "K": 64,
+      "N": 64,
+      "quantize": 0,
+      "no_stalls": 0,
+      "tags": [
+        "ci",
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 64,
+      "K": 64,
+      "N": 64,
+      "quantize": 0,
+      "no_stalls": 1,
+      "tags": [
+        "ci",
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 64,
+      "K": 64,
+      "N": 64,
+      "quantize": 1,
+      "no_stalls": 0,
+      "tags": [
+        "ci",
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 64,
+      "K": 64,
+      "N": 64,
+      "quantize": 1,
+      "no_stalls": 1,
+      "tags": [
+        "ci",
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 0,
+      "tags": [
+        "ci",
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 1,
+      "tags": [
+        "ci",
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 0,
+      "tags": [
+        "ci",
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 1,
+      "tags": [
+        "ci",
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 32,
+      "data_type": "FP8",
+      "M": 32,
+      "K": 32,
+      "N": 32,
+      "quantize": 0,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 32,
+      "data_type": "FP8",
+      "M": 32,
+      "K": 32,
+      "N": 32,
+      "quantize": 0,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 32,
+      "data_type": "FP8",
+      "M": 32,
+      "K": 32,
+      "N": 32,
+      "quantize": 1,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 32,
+      "data_type": "FP8",
+      "M": 32,
+      "K": 32,
+      "N": 32,
+      "quantize": 1,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 32,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 32,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 32,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 32,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 32,
+      "data_type": "FP4",
+      "M": 32,
+      "K": 64,
+      "N": 32,
+      "quantize": 0,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 32,
+      "data_type": "FP4",
+      "M": 32,
+      "K": 64,
+      "N": 32,
+      "quantize": 0,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 32,
+      "data_type": "FP4",
+      "M": 32,
+      "K": 64,
+      "N": 32,
+      "quantize": 1,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 32,
+      "data_type": "FP4",
+      "M": 32,
+      "K": 64,
+      "N": 32,
+      "quantize": 1,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 32,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 32,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 32,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 32,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 64,
+      "K": 32,
+      "N": 32,
+      "quantize": 0,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 64,
+      "K": 32,
+      "N": 32,
+      "quantize": 0,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 64,
+      "K": 32,
+      "N": 32,
+      "quantize": 1,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 64,
+      "K": 32,
+      "N": 32,
+      "quantize": 1,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 64,
+      "K": 64,
+      "N": 32,
+      "quantize": 0,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 64,
+      "K": 64,
+      "N": 32,
+      "quantize": 0,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 64,
+      "K": 64,
+      "N": 32,
+      "quantize": 1,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 64,
+      "K": 64,
+      "N": 32,
+      "quantize": 1,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 128,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 32,
+      "N": 32,
+      "quantize": 0,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 128,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 32,
+      "N": 32,
+      "quantize": 0,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 128,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 32,
+      "N": 32,
+      "quantize": 1,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 128,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 32,
+      "N": 32,
+      "quantize": 1,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 128,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 128,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 128,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 128,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 128,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 64,
+      "N": 32,
+      "quantize": 0,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 128,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 64,
+      "N": 32,
+      "quantize": 0,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 128,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 64,
+      "N": 32,
+      "quantize": 1,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 128,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 64,
+      "N": 32,
+      "quantize": 1,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 128,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 128,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 128,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 128,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 16,
+      "npe": 64,
+      "reuse": 32,
+      "data_type": "FP8",
+      "M": 32,
+      "K": 16,
+      "N": 64,
+      "quantize": 0,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 16,
+      "npe": 64,
+      "reuse": 32,
+      "data_type": "FP8",
+      "M": 32,
+      "K": 16,
+      "N": 64,
+      "quantize": 0,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 16,
+      "npe": 64,
+      "reuse": 32,
+      "data_type": "FP8",
+      "M": 32,
+      "K": 16,
+      "N": 64,
+      "quantize": 1,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 16,
+      "npe": 64,
+      "reuse": 32,
+      "data_type": "FP8",
+      "M": 32,
+      "K": 16,
+      "N": 64,
+      "quantize": 1,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 16,
+      "npe": 64,
+      "reuse": 32,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 16,
+      "npe": 64,
+      "reuse": 32,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 16,
+      "npe": 64,
+      "reuse": 32,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 16,
+      "npe": 64,
+      "reuse": 32,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 16,
+      "npe": 64,
+      "reuse": 32,
+      "data_type": "FP4",
+      "M": 32,
+      "K": 32,
+      "N": 64,
+      "quantize": 0,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 16,
+      "npe": 64,
+      "reuse": 32,
+      "data_type": "FP4",
+      "M": 32,
+      "K": 32,
+      "N": 64,
+      "quantize": 0,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 16,
+      "npe": 64,
+      "reuse": 32,
+      "data_type": "FP4",
+      "M": 32,
+      "K": 32,
+      "N": 64,
+      "quantize": 1,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 16,
+      "npe": 64,
+      "reuse": 32,
+      "data_type": "FP4",
+      "M": 32,
+      "K": 32,
+      "N": 64,
+      "quantize": 1,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 16,
+      "npe": 64,
+      "reuse": 32,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 16,
+      "npe": 64,
+      "reuse": 32,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 16,
+      "npe": 64,
+      "reuse": 32,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 16,
+      "npe": 64,
+      "reuse": 32,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 16,
+      "npe": 64,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 64,
+      "K": 16,
+      "N": 64,
+      "quantize": 0,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 16,
+      "npe": 64,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 64,
+      "K": 16,
+      "N": 64,
+      "quantize": 0,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 16,
+      "npe": 64,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 64,
+      "K": 16,
+      "N": 64,
+      "quantize": 1,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 16,
+      "npe": 64,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 64,
+      "K": 16,
+      "N": 64,
+      "quantize": 1,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 16,
+      "npe": 64,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 16,
+      "npe": 64,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 16,
+      "npe": 64,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 16,
+      "npe": 64,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 16,
+      "npe": 64,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 64,
+      "K": 32,
+      "N": 64,
+      "quantize": 0,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 16,
+      "npe": 64,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 64,
+      "K": 32,
+      "N": 64,
+      "quantize": 0,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 16,
+      "npe": 64,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 64,
+      "K": 32,
+      "N": 64,
+      "quantize": 1,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 16,
+      "npe": 64,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 64,
+      "K": 32,
+      "N": 64,
+      "quantize": 1,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 16,
+      "npe": 64,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 16,
+      "npe": 64,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 16,
+      "npe": 64,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 16,
+      "npe": 64,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 16,
+      "npe": 64,
+      "reuse": 128,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 16,
+      "N": 64,
+      "quantize": 0,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 16,
+      "npe": 64,
+      "reuse": 128,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 16,
+      "N": 64,
+      "quantize": 0,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 16,
+      "npe": 64,
+      "reuse": 128,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 16,
+      "N": 64,
+      "quantize": 1,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 16,
+      "npe": 64,
+      "reuse": 128,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 16,
+      "N": 64,
+      "quantize": 1,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 16,
+      "npe": 64,
+      "reuse": 128,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 16,
+      "npe": 64,
+      "reuse": 128,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 16,
+      "npe": 64,
+      "reuse": 128,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 16,
+      "npe": 64,
+      "reuse": 128,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 16,
+      "npe": 64,
+      "reuse": 128,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 32,
+      "N": 64,
+      "quantize": 0,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 16,
+      "npe": 64,
+      "reuse": 128,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 32,
+      "N": 64,
+      "quantize": 0,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 16,
+      "npe": 64,
+      "reuse": 128,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 32,
+      "N": 64,
+      "quantize": 1,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 16,
+      "npe": 64,
+      "reuse": 128,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 32,
+      "N": 64,
+      "quantize": 1,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 16,
+      "npe": 64,
+      "reuse": 128,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 16,
+      "npe": 64,
+      "reuse": 128,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 16,
+      "npe": 64,
+      "reuse": 128,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 16,
+      "npe": 64,
+      "reuse": 128,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 8,
+      "npe": 128,
+      "reuse": 32,
+      "data_type": "FP8",
+      "M": 32,
+      "K": 8,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 8,
+      "npe": 128,
+      "reuse": 32,
+      "data_type": "FP8",
+      "M": 32,
+      "K": 8,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 8,
+      "npe": 128,
+      "reuse": 32,
+      "data_type": "FP8",
+      "M": 32,
+      "K": 8,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 8,
+      "npe": 128,
+      "reuse": 32,
+      "data_type": "FP8",
+      "M": 32,
+      "K": 8,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 8,
+      "npe": 128,
+      "reuse": 32,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 8,
+      "npe": 128,
+      "reuse": 32,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 8,
+      "npe": 128,
+      "reuse": 32,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 8,
+      "npe": 128,
+      "reuse": 32,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 8,
+      "npe": 128,
+      "reuse": 32,
+      "data_type": "FP4",
+      "M": 32,
+      "K": 16,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 8,
+      "npe": 128,
+      "reuse": 32,
+      "data_type": "FP4",
+      "M": 32,
+      "K": 16,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 8,
+      "npe": 128,
+      "reuse": 32,
+      "data_type": "FP4",
+      "M": 32,
+      "K": 16,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 8,
+      "npe": 128,
+      "reuse": 32,
+      "data_type": "FP4",
+      "M": 32,
+      "K": 16,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 8,
+      "npe": 128,
+      "reuse": 32,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 8,
+      "npe": 128,
+      "reuse": 32,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 8,
+      "npe": 128,
+      "reuse": 32,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 8,
+      "npe": 128,
+      "reuse": 32,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 8,
+      "npe": 128,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 64,
+      "K": 8,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 8,
+      "npe": 128,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 64,
+      "K": 8,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 8,
+      "npe": 128,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 64,
+      "K": 8,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 8,
+      "npe": 128,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 64,
+      "K": 8,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 8,
+      "npe": 128,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 8,
+      "npe": 128,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 8,
+      "npe": 128,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 8,
+      "npe": 128,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 8,
+      "npe": 128,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 64,
+      "K": 16,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 8,
+      "npe": 128,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 64,
+      "K": 16,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 8,
+      "npe": 128,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 64,
+      "K": 16,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 8,
+      "npe": 128,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 64,
+      "K": 16,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 8,
+      "npe": 128,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 8,
+      "npe": 128,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 8,
+      "npe": 128,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 8,
+      "npe": 128,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 8,
+      "npe": 128,
+      "reuse": 128,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 8,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 8,
+      "npe": 128,
+      "reuse": 128,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 8,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 8,
+      "npe": 128,
+      "reuse": 128,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 8,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 8,
+      "npe": 128,
+      "reuse": 128,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 8,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 8,
+      "npe": 128,
+      "reuse": 128,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 8,
+      "npe": 128,
+      "reuse": 128,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 8,
+      "npe": 128,
+      "reuse": 128,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 8,
+      "npe": 128,
+      "reuse": 128,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 8,
+      "npe": 128,
+      "reuse": 128,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 16,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 8,
+      "npe": 128,
+      "reuse": 128,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 16,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 8,
+      "npe": 128,
+      "reuse": 128,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 16,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 8,
+      "npe": 128,
+      "reuse": 128,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 16,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 8,
+      "npe": 128,
+      "reuse": 128,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 8,
+      "npe": 128,
+      "reuse": 128,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 8,
+      "npe": 128,
+      "reuse": 128,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 0,
+      "tags": [
+        "full"
+      ]
+    },
+    {
+      "vector_size": 8,
+      "npe": 128,
+      "reuse": 128,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 1,
+      "tags": [
+        "full"
+      ]
+    }
+  ]
+}
