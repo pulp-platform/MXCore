@@ -4,6 +4,7 @@ from pathlib import Path
 
 from . import utils
 from . import fp_functions
+from .mxcore_utils import quantize_result_to_bf16
 
 from .mxcore_gemm_tests import *
 from . import mxcore_gemm_functions
@@ -33,15 +34,16 @@ def gemm_mxcore_vector_gen(folder_path=default_path, data_type="FP8", acc_data_t
     memory_file    = os.path.join(folder_path, f"memory/data_memory_{_tag}.txt")
     result_file    = os.path.join(folder_path, f"result/result_{_tag}.txt")
     result_mx_file = os.path.join(folder_path, f"result_mx/result_{_tag}.txt")
+    result_bf16_file = os.path.join(folder_path, f"result_bf16/result_{_tag}.txt")
     header_file    = os.path.join(folder_path, f"data_header/data_{_tag}.h")
     dataflow_file  = os.path.join(folder_path, f"debug/dataflow_debug_{_tag}.txt")
     mem_debug_file = os.path.join(folder_path, f"debug/memory_debug_{_tag}.txt")
 
-    for fpath in [memory_file, result_file, result_mx_file, header_file, dataflow_file]:
+    for fpath in [memory_file, result_file, result_mx_file, result_bf16_file, header_file, dataflow_file]:
         os.makedirs(os.path.dirname(fpath), exist_ok=True)
 
     if mxcore_gemm_functions.MEMORY_EXPORT:
-        for f in [memory_file, result_file, result_mx_file, header_file, dataflow_file, mem_debug_file]:
+        for f in [memory_file, result_file, result_mx_file, result_bf16_file, header_file, dataflow_file, mem_debug_file]:
             try:
                 os.remove(f)
             except FileNotFoundError:
@@ -81,6 +83,9 @@ def gemm_mxcore_vector_gen(folder_path=default_path, data_type="FP8", acc_data_t
         block_poison_enable=block_poison_enable,
     )
 
+    if n_errors == 0 and mxcore_gemm_functions.MEMORY_EXPORT:
+        quantize_result_to_bf16(result_file, result_bf16_file, memory_data_width=memory_data_width)
+
     if n_errors == 0:
         print("✅", end=" ")
     else:
@@ -90,6 +95,7 @@ def gemm_mxcore_vector_gen(folder_path=default_path, data_type="FP8", acc_data_t
         print(f"Data Memory:            {memory_file}")
         print(f"MXCore FP32 Results:    {result_file}")
         print(f"MXCore MX Results:      {result_mx_file}")
+        print(f"MXCore BF16 Results:    {result_bf16_file}")
         print(f"C Data Header File:     {header_file}")
         print(f"Dataflow Debug:         {dataflow_file}")
         print(f"Memory Debug:           {mem_debug_file}")

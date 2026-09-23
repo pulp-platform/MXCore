@@ -208,7 +208,7 @@ def generate_compile_tcl(cfg, defaults, workdir):
         "--define", f"M={M}",
         "--define", f"K={K}",
         "--define", f"N={N}",
-        "--define", f"QUANTIZE_OUTPUT={quantize}",
+        "--define", f"QUANTIZE_MXFP8={quantize}",
         "--define", f"PROB_STALL={defaults['prob_stall']}",
         "--define", f"NO_STALLS={cfg['no_stalls']}",
         "--define", "HCI_ASSERT_DELAY=#41ps",

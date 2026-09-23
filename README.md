@@ -76,7 +76,7 @@ python -m PyGolden.tests --help
 After generating test data, fetch the hardware dependencies and run the simulation:
 ```bash
 make bender
-make sim src_fmt=FP8 vector_size=32 num_compute_units=32 num_out_buffers=64 num_pipe_regs=4 tcdm_bw=512 mdim=128 kdim=128 ndim=128 no_stalls=1 prob_stall=0 quantize_output=1 block_size=32
+make sim src_fmt=FP8 vector_size=32 num_compute_units=32 num_out_buffers=64 num_pipe_regs=4 tcdm_bw=512 mdim=128 kdim=128 ndim=128 no_stalls=1 prob_stall=0 quantize_mxfp8=1 block_size=32
 ```
 
 A passing run prints `:) Passed with no mismatches! :)`.

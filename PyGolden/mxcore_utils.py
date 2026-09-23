@@ -73,6 +73,31 @@ def _acc_to_fp32_u32(acc):
     bits = struct.unpack(">I", struct.pack(">f", float(acc.value)))[0]
     return bits
 
+def quantize_bf16(fp32_bits):
+    sign = (fp32_bits >> 31) & 1
+    exp = (fp32_bits >> 23) & 0xFF
+    mant = fp32_bits & 0x7FFFFF
+    if exp == 0xFF and mant != 0:
+        return (sign << 15) | 0x7FC0
+    rounded = fp32_bits + 0x7FFF + ((fp32_bits >> 16) & 1)
+    return (rounded >> 16) & 0xFFFF
+
+def quantize_result_to_bf16(res_file, res_bf16_file, memory_data_width=32):
+    with open(res_file) as f:
+        fp32_words = [int(line.strip(), 16) for line in f if line.strip()]
+    halfwords = [quantize_bf16(w) for w in fp32_words]
+    halfwords_per_line = memory_data_width // 16
+    lines = []
+    for k in range(0, len(halfwords), halfwords_per_line):
+        group = halfwords[k:k + halfwords_per_line]
+        group += [0] * (halfwords_per_line - len(group))
+        word = sum(h << (16 * j) for j, h in enumerate(group))
+        lines.append(f"{word:0{memory_data_width // 4}x}")
+    with open(res_bf16_file, "w") as f:
+        for line in lines:
+            f.write(line + "\n")
+    return len(fp32_words), len(lines)
+
 def extend_vector_bytes_for_header(dst, vec_bits, data_type="FP8"):
     if data_type == "FP4":
         packed_bytes = vec_to_hex(

@@ -101,20 +101,21 @@ module mxcore_hwpe_ctrl
 
   always_comb begin
     // Engine Control Signals - Output to Engine
-    ctrl_engine_o             = '0;
-    ctrl_engine_o.rnd_mode    = fpnew_pkg::roundmode_e'(reg_file.hwpe_params[MXCoreRegCtrlEngine][2:0]);
-    ctrl_engine_o.op          = fpnew_pkg::operation_e'(reg_file.hwpe_params[MXCoreRegCtrlEngine][7:3]);
-    ctrl_engine_o.op_mod      = reg_file.hwpe_params[MXCoreRegCtrlEngine][8];
-    ctrl_engine_o.src_fmt     = fpnew_pkg::fp_format_e'(reg_file.hwpe_params[MXCoreRegCtrlEngine][12:9]);
-    ctrl_engine_o.dst_fmt     = fpnew_pkg::fp_format_e'(reg_file.hwpe_params[MXCoreRegCtrlEngine][16:13]);
-    ctrl_engine_o.tag         = reg_file.hwpe_params[MXCoreRegCtrlEngine][17];
-    ctrl_engine_o.mask        = reg_file.hwpe_params[MXCoreRegCtrlEngine][18];
-    ctrl_engine_o.aux         = reg_file.hwpe_params[MXCoreRegCtrlEngine][19];
-    ctrl_engine_o.flush       = reg_file.hwpe_params[MXCoreRegCtrlEngine][20];
-    ctrl_engine_o.quantize    = reg_file.hwpe_params[MXCoreRegCtrlEngine][21];
-    ctrl_engine_o.block_poison_enable = reg_file.hwpe_params[MXCoreRegCtrlEngine][22];
-    ctrl_engine_o.iter_count  = ITER_COUNT[15:0];
-    ctrl_engine_o.sbmat_lt_bw = SBMAT_LT_BW;
+    ctrl_engine_o                         = '0;
+    ctrl_engine_o.rnd_mode                = fpnew_pkg::roundmode_e'(reg_file.hwpe_params[MXCoreRegCtrlEngine][2:0]);
+    ctrl_engine_o.op                      = fpnew_pkg::operation_e'(reg_file.hwpe_params[MXCoreRegCtrlEngine][7:3]);
+    ctrl_engine_o.op_mod                  = reg_file.hwpe_params[MXCoreRegCtrlEngine][8];
+    ctrl_engine_o.src_fmt                 = fpnew_pkg::fp_format_e'(reg_file.hwpe_params[MXCoreRegCtrlEngine][12:9]);
+    ctrl_engine_o.dst_fmt                 = fpnew_pkg::fp_format_e'(reg_file.hwpe_params[MXCoreRegCtrlEngine][16:13]);
+    ctrl_engine_o.tag                     = reg_file.hwpe_params[MXCoreRegCtrlEngine][17];
+    ctrl_engine_o.mask                    = reg_file.hwpe_params[MXCoreRegCtrlEngine][18];
+    ctrl_engine_o.aux                     = reg_file.hwpe_params[MXCoreRegCtrlEngine][19];
+    ctrl_engine_o.flush                   = reg_file.hwpe_params[MXCoreRegCtrlEngine][20];
+    ctrl_engine_o.quantize_bf16           = reg_file.hwpe_params[MXCoreRegCtrlEngine][21];
+    ctrl_engine_o.quantize_mxfp8          = reg_file.hwpe_params[MXCoreRegCtrlEngine][22] && !reg_file.hwpe_params[MXCoreRegCtrlEngine][21];
+    ctrl_engine_o.block_poison_enable     = reg_file.hwpe_params[MXCoreRegCtrlEngine][23];
+    ctrl_engine_o.iter_count              = ITER_COUNT[15:0];
+    ctrl_engine_o.sbmat_lt_bw             = SBMAT_LT_BW;
     ctrl_engine_o.result_scale_tot_pushes = M*N/NPE;
   end
 
@@ -230,7 +231,7 @@ module mxcore_hwpe_ctrl
           ctrl_streamer_o.scale_a_source_ctrl.req_start     = 1'b1;
           ctrl_streamer_o.scale_b_source_ctrl.req_start     = 1'b1;
           ctrl_streamer_o.result_sink_ctrl.req_start        = 1'b1;
-          ctrl_streamer_o.result_scale_sink_ctrl.req_start  = ctrl_engine_o.quantize;
+          ctrl_streamer_o.result_scale_sink_ctrl.req_start  = ctrl_engine_o.quantize_mxfp8;
         end
       end
       Done: begin

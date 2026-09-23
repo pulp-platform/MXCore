@@ -44,6 +44,7 @@ sources:
       - target: mxcore_hwpe
         files:
           - mxcore-rtl/src/hwpe/fp32_to_mxfp8_quantizer.sv
+          - mxcore-rtl/src/hwpe/fp32_to_bf16_quantizer.sv
           - mxcore-rtl/src/hwpe/block_scale.sv
           - mxcore-rtl/src/hwpe/mxcore_hwpe_result_quantizer.sv
           - mxcore-rtl/src/hwpe/mxcore_hwpe_block_quantizer.sv
