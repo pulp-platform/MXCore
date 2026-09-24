@@ -19,6 +19,7 @@ module mxcore_engine
   input  logic [NPE-1:0][1:0]                           operands_b_fp6_rem_i,
   input  logic [NPE-1:0][1:0][SCALE_WIDTH-1:0]          operands_c_i,
   input  logic [NPE-1:0][DST_WIDTH-1:0]                 operand_d_i,
+  hwpe_stream_intf_stream.sink                          preload_bias_i,
   // Input Control/Configuration Signals
   input  logic [NUM_FORMATS-1:0][NumOperands-1:0]      is_boxed_i,
   input  fpnew_pkg::roundmode_e                         rnd_mode_i,
@@ -31,6 +32,8 @@ module mxcore_engine
   input  logic                                          mask_i,
   input  AuxType                                        aux_i,
   input  logic [15:0]                                   ireuse_i,
+  input  logic                                          preload_i,
+  input  logic                                          compute_en_i,
   // Input Handshake Signals
   input  logic [NPE-1:0]                                in_valid_i,
   output logic [NPE-1:0]                                in_ready_o,
@@ -46,6 +49,9 @@ module mxcore_engine
   // Output Handshake Signals
   output logic [NPE-1:0]                                out_valid_o,
   input  logic [NPE-1:0]                                out_ready_i,
+  // Preload Status Signals
+  output logic                                          preload_done_o,
+  output logic                                          tile_end_o,
   // Indication of valid data in flight
   output logic                                          busy_o
 );
@@ -71,17 +77,17 @@ module mxcore_engine
   logic [NPE-1:0][DST_WIDTH-1:0]                  operand_d;
 
   // Iteration Status Signals
-  logic first_iter, last_iter;
+  logic first_iter, last_iter, tile_end;
   logic in_accept, in_fire, out_fire;
 
   // Inputs after the first iteration also need their partial result from the output buffer
-  assign in_accept        = first_iter || obuff_result_valid;
+  assign in_accept        = (first_iter && !preload_i) || (obuff_result_valid && compute_en_i);
   assign mxdotp_in_valid  = in_valid_i & {NPE{in_accept}};
   assign in_ready_o       = mxdotp_in_ready & {NPE{in_accept}};
   assign in_fire          = (&in_valid_i) && (&in_ready_o);
   assign out_fire         = (&mxdotp_result_valid) && mxdotp_result_ready;
 
-  assign obuff_result_ready = in_fire && !first_iter;
+  assign obuff_result_ready = in_fire && (!first_iter || preload_i);
   assign tile_result_ready  = &out_ready_i;
 
   always_comb begin
@@ -97,7 +103,7 @@ module mxcore_engine
       operands_a_fp6_rem  = operands_a_fp6_rem_i;
       operands_b_fp6_rem  = operands_b_fp6_rem_i;
       operands_c          = operands_c_i;
-      if (!first_iter) begin
+      if (!first_iter || preload_i) begin
         operand_d         = obuff_result;
       end
     end
@@ -113,7 +119,8 @@ module mxcore_engine
     .count_in_i   ( in_fire     ),
     .count_out_i  ( out_fire    ),
     .first_iter_o ( first_iter  ),
-    .last_iter_o  ( last_iter   )
+    .last_iter_o  ( last_iter   ),
+    .tile_end_o   ( tile_end    )
   );
 
   // MXDOTP Array
@@ -161,6 +168,12 @@ module mxcore_engine
     .mxdotp_result_ready_o    ( mxdotp_result_ready   ),
     .mxdotp_result_i          ( mxdotp_result         ),
     .last_iter_i              ( last_iter             ),
+    .preload_i                ( preload_i             ),
+    .tile_end_i               ( tile_end              ),
+    .preload_bias_valid_i     ( preload_bias_i.valid  ),
+    .preload_bias_ready_o     ( preload_bias_i.ready  ),
+    .preload_bias_i           ( preload_bias_i.data   ),
+    .preload_done_o           ( preload_done_o        ),
     .obuff_result_valid_o     ( obuff_result_valid    ),
     .obuff_result_ready_i     ( obuff_result_ready    ),
     .obuff_result_o           ( obuff_result          ),
@@ -172,6 +185,7 @@ module mxcore_engine
 
   assign out_valid_o  = {NPE{tile_result_valid}};
   assign result_o     = tile_result;
+  assign tile_end_o   = tile_end;
   assign busy_o       = mxdotp_busy || !obuff_empty;
 
 endmodule: mxcore_engine

@@ -23,6 +23,8 @@ module mxcore_hwpe_engine
   // // Scales
   hwpe_stream_intf_stream.sink      scale_a_i,
   hwpe_stream_intf_stream.sink      scale_b_i,
+  // // Preload Bias
+  hwpe_stream_intf_stream.sink      preload_bias_i,
   // // Result
   hwpe_stream_intf_stream.source    result_o,
   // Control Channel
@@ -76,6 +78,7 @@ module mxcore_hwpe_engine
     .operands_b_fp6_rem_i ( '0                    ),
     .operands_c_i         ( operands_c            ),
     .operand_d_i          ( operand_d             ),
+    .preload_bias_i       ( preload_bias_i        ),
     .is_boxed_i           ( is_boxed              ),
     .rnd_mode_i           ( ctrl_i.rnd_mode       ),
     .op_i                 ( ctrl_i.op             ),
@@ -87,6 +90,8 @@ module mxcore_hwpe_engine
     .mask_i               ( ctrl_i.mask           ),
     .aux_i                ( ctrl_i.aux            ),
     .ireuse_i             ( ctrl_i.iter_count     ),
+    .preload_i            ( ctrl_i.preload        ),
+    .compute_en_i         ( ctrl_i.compute_en     ),
     .in_valid_i           ( inputs_valid          ),
     .in_ready_o           ( inputs_ready          ),
     .flush_i              ( ctrl_i.flush          ),
@@ -98,6 +103,8 @@ module mxcore_hwpe_engine
     .aux_o                ( flags_o.aux           ),
     .out_valid_o          ( output_valid          ),
     .out_ready_i          ( output_ready          ),
+    .preload_done_o       ( flags_o.preload_done  ),
+    .tile_end_o           ( flags_o.tile_end      ),
     .busy_o               ( flags_o.busy          )
   );
 

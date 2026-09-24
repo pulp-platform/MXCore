@@ -35,6 +35,7 @@ module tb_mxcore_hwpe;
 
   parameter bit QuantizeMXFP8  = `ifdef QUANTIZE_MXFP8 `QUANTIZE_MXFP8 `else 1 `endif;
   parameter bit QuantizeBF16   = `ifdef QUANTIZE_BF16 `QUANTIZE_BF16 `else 0 `endif;
+  parameter bit Preload        = `ifdef PRELOAD `PRELOAD `else 0 `endif;
 
   // HWPE Parameters
   parameter real ProbStall = `ifdef NO_STALLS ((`NO_STALLS == 1) ? 0 : 0.1) `else 0.1 `endif;
@@ -77,22 +78,24 @@ module tb_mxcore_hwpe;
   localparam int unsigned NUM_SCALE_BLOCKS_K    = (`SRC_FMT == "FP4") ? ((KDIM + FP4_BLOCK_SIZE - 1) / FP4_BLOCK_SIZE) : ((KDIM + MX_BLOCK_SIZE - 1) / MX_BLOCK_SIZE);
   localparam int unsigned MAT_SCALE_A_SIZE      = MDIM*NUM_SCALE_BLOCKS_K*SCALE_WIDTH;
   localparam int unsigned MAT_SCALE_B_SIZE      = NDIM*NUM_SCALE_BLOCKS_K*SCALE_WIDTH;
+  localparam int unsigned MAT_PRELOAD_BIAS_SIZE = (Preload == 1) ? (MDIM*NDIM*DST_WIDTH) : 0;
   localparam int unsigned MAT_RESULT_SIZE       = (QuantizeBF16 == 1) ? (MDIM*NDIM*16) : ((QuantizeMXFP8 == 1) ? (MDIM*NDIM*SRC_WIDTH) : (MDIM*NDIM*DST_WIDTH));
   localparam int unsigned MAT_RESULT_SCALE_SIZE = MDIM*NDIM*SCALE_WIDTH/MX_BLOCK_SIZE;
 
   // Data Memory Size
-  localparam int unsigned GEMM_SIZE_FP32        = ((MAT_A_SIZE + MAT_B_SIZE + MAT_SCALE_A_SIZE + MAT_SCALE_B_SIZE + MDIM*NDIM*DST_WIDTH) / 8);
-  localparam int unsigned GEMM_SIZE_BF16        = ((MAT_A_SIZE + MAT_B_SIZE + MAT_SCALE_A_SIZE + MAT_SCALE_B_SIZE + MDIM*NDIM*16) / 8);
-  localparam int unsigned GEMM_SIZE_MXFP8       = ((MAT_A_SIZE + MAT_B_SIZE + MAT_SCALE_A_SIZE + MAT_SCALE_B_SIZE + MDIM*NDIM*SRC_WIDTH + MDIM*NDIM*SCALE_WIDTH/MX_BLOCK_SIZE) / 8);
+  localparam int unsigned GEMM_SIZE_FP32        = ((MAT_A_SIZE + MAT_B_SIZE + MAT_SCALE_A_SIZE + MAT_SCALE_B_SIZE + MAT_PRELOAD_BIAS_SIZE + MDIM*NDIM*DST_WIDTH) / 8);
+  localparam int unsigned GEMM_SIZE_BF16        = ((MAT_A_SIZE + MAT_B_SIZE + MAT_SCALE_A_SIZE + MAT_SCALE_B_SIZE + MAT_PRELOAD_BIAS_SIZE + MDIM*NDIM*16) / 8);
+  localparam int unsigned GEMM_SIZE_MXFP8       = ((MAT_A_SIZE + MAT_B_SIZE + MAT_SCALE_A_SIZE + MAT_SCALE_B_SIZE + MAT_PRELOAD_BIAS_SIZE + MDIM*NDIM*SRC_WIDTH + MDIM*NDIM*SCALE_WIDTH/MX_BLOCK_SIZE) / 8);
 
   parameter MemorySize   = (QuantizeBF16 == 1) ? GEMM_SIZE_BF16 : ((QuantizeMXFP8 == 1) ? GEMM_SIZE_MXFP8 : GEMM_SIZE_FP32);
 
   // Input/Output Base Address Pointers
-  integer       BASE_PTR[6];
+  integer       BASE_PTR[7];
   logic [31:0]  BASE_PTR_VECTOR_A;
   logic [31:0]  BASE_PTR_VECTORS_B;
   logic [31:0]  BASE_PTR_SCALE_A;
   logic [31:0]  BASE_PTR_SCALE_B;
+  logic [31:0]  BASE_PTR_PRELOAD_BIAS;
   logic [31:0]  BASE_PTR_RESULT;
   logic [31:0]  BASE_PTR_RESULT_SCALE;
 
@@ -136,15 +139,17 @@ module tb_mxcore_hwpe;
     BASE_PTR[2] = BASE_PTR[1] + MAT_B_SIZE/8;
     BASE_PTR[3] = BASE_PTR[2] + MAT_SCALE_A_SIZE/8;
     BASE_PTR[4] = BASE_PTR[3] + MAT_SCALE_B_SIZE/8;
-    BASE_PTR[5] = BASE_PTR[4] + MAT_RESULT_SIZE/8;
+    BASE_PTR[5] = BASE_PTR[4] + MAT_PRELOAD_BIAS_SIZE/8;
+    BASE_PTR[6] = BASE_PTR[5] + MAT_RESULT_SIZE/8;
 
     // Base Pointers
     BASE_PTR_VECTOR_A     = BASE_PTR[0];
     BASE_PTR_VECTORS_B    = BASE_PTR[1];
     BASE_PTR_SCALE_A      = BASE_PTR[2];
     BASE_PTR_SCALE_B      = BASE_PTR[3];
-    BASE_PTR_RESULT       = BASE_PTR[4];
-    BASE_PTR_RESULT_SCALE = BASE_PTR[5];
+    BASE_PTR_PRELOAD_BIAS = BASE_PTR[4];
+    BASE_PTR_RESULT       = BASE_PTR[5];
+    BASE_PTR_RESULT_SCALE = BASE_PTR[6];
   end
 
   generate
@@ -253,7 +258,7 @@ module tb_mxcore_hwpe;
       PERIPH_READ(32'h04, 32'h0, status, clk);
 
     // MXCORE Compute
-    mxcore_compute(MDIM, KDIM, NDIM, fpnew_pkg::RNE, fpnew_pkg::SDOTP, 0, SRC_FMT, DST_FMT, '0, '0, '0, 0, QuantizeMXFP8, QuantizeBF16, clk);
+    mxcore_compute(MDIM, KDIM, NDIM, fpnew_pkg::RNE, fpnew_pkg::SDOTP, 0, SRC_FMT, DST_FMT, '0, '0, '0, 0, QuantizeMXFP8, QuantizeBF16, Preload, clk);
 
     // Wait for Finish
     wait(evt);
@@ -263,7 +268,7 @@ module tb_mxcore_hwpe;
 
     #(10ns);
 
-    compare_output(result_file, BASE_PTR[4]);
+    compare_output(result_file, BASE_PTR[5]);
 
     // Finish the Simulation
     $finish;
@@ -284,6 +289,7 @@ module tb_mxcore_hwpe;
     input logic                     flush,
     input logic                     quantize_mxfp8,
     input logic                     quantize_bf16,
+    input logic                     preload,
     ref   logic                     clk_i
   );
     logic [31:0] ctrl_engine_val;
@@ -291,15 +297,16 @@ module tb_mxcore_hwpe;
     logic [31:0] vectors_b_base_ptr     = BASE_PTR_VECTORS_B;
     logic [31:0] scale_a_base_ptr       = BASE_PTR_SCALE_A;
     logic [31:0] scale_b_base_ptr       = BASE_PTR_SCALE_B;
+    logic [31:0] preload_bias_base_ptr  = BASE_PTR_PRELOAD_BIAS;
     logic [31:0] result_base_ptr        = BASE_PTR_RESULT;
     logic [31:0] result_scale_base_ptr  = BASE_PTR_RESULT_SCALE;
 
     //  Get the Engine Control Value
-    ctrl_engine_val_compute(rnd_mode, op, op_mod, src_fmt, dst_fmt, tag, mask, aux, flush, quantize_mxfp8, quantize_bf16, ctrl_engine_val);
+    ctrl_engine_val_compute(rnd_mode, op, op_mod, src_fmt, dst_fmt, tag, mask, aux, flush, quantize_mxfp8, quantize_bf16, preload, ctrl_engine_val);
     $display(" - MXCore Engine Control Register: 0x%0h", ctrl_engine_val);
 
     // Program MXCore
-    PROGRAM_MXCORE(vector_a_base_ptr, vectors_b_base_ptr, scale_a_base_ptr, scale_b_base_ptr, result_base_ptr, result_scale_base_ptr, ctrl_engine_val, MDIM, KDIM, NDIM, clk_i);
+    PROGRAM_MXCORE(vector_a_base_ptr, vectors_b_base_ptr, scale_a_base_ptr, scale_b_base_ptr, preload_bias_base_ptr, result_base_ptr, result_scale_base_ptr, ctrl_engine_val, MDIM, KDIM, NDIM, clk_i);
 
     // Wait for MXCore to finish
     @(posedge clk_i);
@@ -322,9 +329,12 @@ module tb_mxcore_hwpe;
     input  logic                    flush,
     input  logic                    quantize_mxfp8,
     input  logic                    quantize_bf16,
+    input  logic                    preload,
     output logic [31:0]             ctrl_engine_val
   );
-    ctrl_engine_val[31:23]  = '0;
+    ctrl_engine_val[31:25]  = '0;
+    ctrl_engine_val[24]     = preload;
+    ctrl_engine_val[23]     = 1'b0;
     ctrl_engine_val[22]     = quantize_mxfp8;
     ctrl_engine_val[21]     = quantize_bf16;
     ctrl_engine_val[20:17]  = {flush, aux, mask, tag};
@@ -412,6 +422,7 @@ module tb_mxcore_hwpe;
     input logic [31:0]  vectors_b_ptr,
     input logic [31:0]  scale_a_ptr,
     input logic [31:0]  scale_b_ptr,
+    input logic [31:0]  preload_bias_ptr,
     input logic [31:0]  result_ptr,
     input logic [31:0]  result_scale_ptr,
     input logic [31:0]  ctrl_engine_val,
@@ -423,28 +434,33 @@ module tb_mxcore_hwpe;
     logic [3:0]  a_row_tiles_val;
     logic [4:0]  b_col_tiles_val;
     logic [6:0]  inner_tiles_val, inner_blocks_val;
-    logic [31:0] a_tile_size_val, b_tile_size_val, result_tile_size_val, iter_count_val;
-    a_row_tiles_val      = MDIM / REUSE;
-    b_col_tiles_val      = NDIM / NPE;
-    inner_tiles_val      = KDIM / VECTOR_SIZE;
-    inner_blocks_val     = (`SRC_FMT == "FP4") ? ((KDIM + FP4_BLOCK_SIZE - 1) / FP4_BLOCK_SIZE) : ((KDIM + MX_BLOCK_SIZE - 1) / MX_BLOCK_SIZE);
-    a_tile_size_val      = (`SRC_FMT == "FP4") ? (REUSE*VECTOR_SIZE*FP4_SRC_WIDTH) : (REUSE*VECTOR_SIZE*SRC_WIDTH);
-    b_tile_size_val      = (`SRC_FMT == "FP4") ? (VECTOR_SIZE*NPE*FP4_SRC_WIDTH) : (VECTOR_SIZE*NPE*SRC_WIDTH);
-    result_tile_size_val = (QuantizeBF16 == 1) ? (NPE*REUSE*16) : ((QuantizeMXFP8 == 1) ? (NPE*REUSE*SRC_WIDTH) : (NPE*REUSE*DST_WIDTH));
-    iter_count_val       = (`SRC_FMT == "FP4") ? ((KDIM*REUSE)/(2*VECTOR_SIZE)) : ((KDIM*REUSE)/VECTOR_SIZE);
-    PERIPH_WRITE(  4*MXCoreRegVectorAPtr,      MXCORE_REG_OFFSET,  vector_a_ptr,                                                                 clk_i  );
-    PERIPH_WRITE(  4*MXCoreRegVectorsBPtr,     MXCORE_REG_OFFSET,  vectors_b_ptr,                                                                clk_i  );
-    PERIPH_WRITE(  4*MXCoreRegScaleAPtr,       MXCORE_REG_OFFSET,  scale_a_ptr,                                                                  clk_i  );
-    PERIPH_WRITE(  4*MXCoreRegScaleBPtr,       MXCORE_REG_OFFSET,  scale_b_ptr,                                                                  clk_i  );
-    PERIPH_WRITE(  4*MXCoreRegResultPtr,       MXCORE_REG_OFFSET,  result_ptr,                                                                   clk_i  );
-    PERIPH_WRITE(  4*MXCoreRegResultScalePtr,  MXCORE_REG_OFFSET,  result_scale_ptr,                                                             clk_i  );
-    PERIPH_WRITE(  4*MXCoreRegGEMMSize,        MXCORE_REG_OFFSET,  {NDIM[9:0], KDIM[11:0], MDIM[9:0]},                                           clk_i  );
-    PERIPH_WRITE(  4*MXCoreRegCtrlEngine,      MXCORE_REG_OFFSET,  ctrl_engine_val,                                                              clk_i  );
-    PERIPH_WRITE(  4*MXCoreRegTileCounts,      MXCORE_REG_OFFSET,  {9'b0, inner_blocks_val, inner_tiles_val, b_col_tiles_val, a_row_tiles_val},  clk_i  );
-    PERIPH_WRITE(  4*MXCoreRegATileSize,       MXCORE_REG_OFFSET,  a_tile_size_val,                                                              clk_i  );
-    PERIPH_WRITE(  4*MXCoreRegBTileSize,       MXCORE_REG_OFFSET,  b_tile_size_val,                                                              clk_i  );
-    PERIPH_WRITE(  4*MXCoreRegResultTileSize,  MXCORE_REG_OFFSET,  result_tile_size_val,                                                         clk_i  );
-    PERIPH_WRITE(  4*MXCoreRegIterCount,       MXCORE_REG_OFFSET,  iter_count_val,                                                               clk_i  );
+    logic [31:0] a_tile_size_val, b_tile_size_val, preload_tile_size_val, result_tile_size_val, result_scale_tile_size_val, iter_count_val;
+    a_row_tiles_val             = MDIM / REUSE;
+    b_col_tiles_val             = NDIM / NPE;
+    inner_tiles_val             = KDIM / VECTOR_SIZE;
+    inner_blocks_val            = (`SRC_FMT == "FP4") ? ((KDIM + FP4_BLOCK_SIZE - 1) / FP4_BLOCK_SIZE) : ((KDIM + MX_BLOCK_SIZE - 1) / MX_BLOCK_SIZE);
+    a_tile_size_val             = (`SRC_FMT == "FP4") ? (REUSE*VECTOR_SIZE*FP4_SRC_WIDTH) : (REUSE*VECTOR_SIZE*SRC_WIDTH);
+    b_tile_size_val             = (`SRC_FMT == "FP4") ? (VECTOR_SIZE*NPE*FP4_SRC_WIDTH) : (VECTOR_SIZE*NPE*SRC_WIDTH);
+    preload_tile_size_val       = NPE*REUSE*DST_WIDTH;
+    result_tile_size_val        = (QuantizeBF16 == 1) ? (NPE*REUSE*16) : ((QuantizeMXFP8 == 1) ? (NPE*REUSE*SRC_WIDTH) : (NPE*REUSE*DST_WIDTH));
+    result_scale_tile_size_val  = (NPE/MX_BLOCK_SIZE)*REUSE*SCALE_WIDTH;
+    iter_count_val              = (`SRC_FMT == "FP4") ? ((KDIM*REUSE)/(2*VECTOR_SIZE)) : ((KDIM*REUSE)/VECTOR_SIZE);
+    PERIPH_WRITE(  4*MXCoreRegVectorAPtr,          MXCORE_REG_OFFSET,  vector_a_ptr,                                                                 clk_i  );
+    PERIPH_WRITE(  4*MXCoreRegVectorsBPtr,         MXCORE_REG_OFFSET,  vectors_b_ptr,                                                                clk_i  );
+    PERIPH_WRITE(  4*MXCoreRegScaleAPtr,           MXCORE_REG_OFFSET,  scale_a_ptr,                                                                  clk_i  );
+    PERIPH_WRITE(  4*MXCoreRegScaleBPtr,           MXCORE_REG_OFFSET,  scale_b_ptr,                                                                  clk_i  );
+    PERIPH_WRITE(  4*MXCoreRegPreloadBiasPtr,      MXCORE_REG_OFFSET,  preload_bias_ptr,                                                             clk_i  );
+    PERIPH_WRITE(  4*MXCoreRegResultPtr,           MXCORE_REG_OFFSET,  result_ptr,                                                                   clk_i  );
+    PERIPH_WRITE(  4*MXCoreRegResultScalePtr,      MXCORE_REG_OFFSET,  result_scale_ptr,                                                             clk_i  );
+    PERIPH_WRITE(  4*MXCoreRegGEMMSize,            MXCORE_REG_OFFSET,  {NDIM[9:0], KDIM[11:0], MDIM[9:0]},                                           clk_i  );
+    PERIPH_WRITE(  4*MXCoreRegCtrlEngine,          MXCORE_REG_OFFSET,  ctrl_engine_val,                                                              clk_i  );
+    PERIPH_WRITE(  4*MXCoreRegTileCounts,          MXCORE_REG_OFFSET,  {9'b0, inner_blocks_val, inner_tiles_val, b_col_tiles_val, a_row_tiles_val},  clk_i  );
+    PERIPH_WRITE(  4*MXCoreRegATileSize,           MXCORE_REG_OFFSET,  a_tile_size_val,                                                              clk_i  );
+    PERIPH_WRITE(  4*MXCoreRegBTileSize,           MXCORE_REG_OFFSET,  b_tile_size_val,                                                              clk_i  );
+    PERIPH_WRITE(  4*MXCoreRegPreloadTileSize,     MXCORE_REG_OFFSET,  preload_tile_size_val,                                                        clk_i  );
+    PERIPH_WRITE(  4*MXCoreRegResultTileSize,      MXCORE_REG_OFFSET,  result_tile_size_val,                                                         clk_i  );
+    PERIPH_WRITE(  4*MXCoreRegResultScaleTileSize, MXCORE_REG_OFFSET,  result_scale_tile_size_val,                                                   clk_i  );
+    PERIPH_WRITE(  4*MXCoreRegIterCount,           MXCORE_REG_OFFSET,  iter_count_val,                                                               clk_i  );
   endtask : PROGRAM_MXCORE
 
   localparam ID = 0;    // Core ID

@@ -63,6 +63,12 @@ module mxcore_hwpe_top
 
   hwpe_stream_intf_stream #(
     .DATA_WIDTH ( MXCoreTCDMDataWidth )
+  ) mxcore_preload_bias (
+    .clk ( clk_i )
+  );
+
+  hwpe_stream_intf_stream #(
+    .DATA_WIDTH ( MXCoreTCDMDataWidth )
   ) mxcore_result (
     .clk ( clk_i )
   );
@@ -94,6 +100,12 @@ module mxcore_hwpe_top
   hwpe_stream_intf_stream #(
     .DATA_WIDTH ( MXCoreScaleBDataWidth   )
   ) mxcore_engine_scale_b (
+    .clk ( clk_i )
+  );
+
+  hwpe_stream_intf_stream #(
+    .DATA_WIDTH ( MXCoreEngineResultDataWidth )
+  ) mxcore_engine_preload_bias (
     .clk ( clk_i )
   );
 
@@ -234,6 +246,19 @@ module mxcore_hwpe_top
     .data_i           ( mxcore_scale_b.sink         ),
     .data_o           ( scale_b_prefence.source     )
   );
+
+  // Preload Bias Buffer
+  mxcore_hwpe_result_fifo_buffer #(
+    .InputDataWidth     ( MXCoreTCDMDataWidth         ),
+    .OutputDataWidth    ( MXCoreEngineResultDataWidth ),
+    .FifoDepth          ( 2                           )
+  ) i_preload_bias_buffer (
+    .clk_i    ( clk_i                             ),
+    .rst_ni   ( rst_ni                            ),
+    .clear_i  ( clear                             ),
+    .data_i   ( mxcore_preload_bias.sink          ),
+    .data_o   ( mxcore_engine_preload_bias.source )
+  );
   // --------------------------- END: Input Buffers  --------------------------- //
 
   // ------------------------------- Input Fence ------------------------------- //
@@ -277,17 +302,18 @@ module mxcore_hwpe_top
 
   // -------------------------- MXCore Engine ---------------------------------- //
   mxcore_hwpe_engine i_engine (
-    .clk_i          ( clk_i                         ),
-    .rst_ni         ( rst_ni                        ),
-    .clear_i        ( clear                         ),
-    .test_mode_i    ( test_mode_i                   ),
-    .vector_a_i     ( mxcore_engine_vector_a.sink   ),
-    .vectors_b_i    ( mxcore_engine_vectors_b.sink  ),
-    .scale_a_i      ( mxcore_engine_scale_a.sink    ),
-    .scale_b_i      ( mxcore_engine_scale_b.sink    ),
-    .result_o       ( mxcore_engine_result.source   ),
-    .ctrl_i         ( engine_ctrl                   ),
-    .flags_o        ( engine_flags                  )
+    .clk_i          ( clk_i                           ),
+    .rst_ni         ( rst_ni                          ),
+    .clear_i        ( clear                           ),
+    .test_mode_i    ( test_mode_i                     ),
+    .vector_a_i     ( mxcore_engine_vector_a.sink     ),
+    .vectors_b_i    ( mxcore_engine_vectors_b.sink    ),
+    .scale_a_i      ( mxcore_engine_scale_a.sink      ),
+    .scale_b_i      ( mxcore_engine_scale_b.sink      ),
+    .preload_bias_i ( mxcore_engine_preload_bias.sink ),
+    .result_o       ( mxcore_engine_result.source     ),
+    .ctrl_i         ( engine_ctrl                     ),
+    .flags_o        ( engine_flags                    )
   );
 
   // ------------------------ MXCore Engine Result DEMUX ----------------------- //
@@ -378,26 +404,27 @@ module mxcore_hwpe_top
                                           engine_ctrl.quantize_mxfp8 ? mxcore_quantized_result.strb  : mxcore_fp32_result.strb;
   assign mxcore_bf16_result.ready       = engine_ctrl.quantize_bf16  ? mxcore_result.ready : 1'b0;
   assign mxcore_quantized_result.ready  = engine_ctrl.quantize_mxfp8 ? mxcore_result.ready : 1'b0;
-  assign mxcore_fp32_result.ready       = quantize_any               ? 1'b0 : mxcore_result.ready;
+  assign mxcore_fp32_result.ready       = quantize_any ? 1'b0 : mxcore_result.ready;
 
   // -------------------------- MXCore HWPE Streamer --------------------------- //
   assign enable = 1'b1;
   mxcore_hwpe_streamer i_streamer (
-    .clk_i          ( clk_i                     ),
-    .rst_ni         ( rst_ni                    ),
-    .test_mode_i    ( test_mode_i               ),
-    .enable_i       ( enable                    ),
-    .clear_i        ( clear                     ),
-    .vector_a_o     ( mxcore_vector_a.source    ),
-    .vectors_b_o    ( mxcore_vectors_b.source   ),
-    .scale_a_o      ( mxcore_scale_a.source     ),
-    .scale_b_o      ( mxcore_scale_b.source     ),
-    .result_i       ( mxcore_result.sink        ),
-    .result_scale_i ( mxcore_result_scale.sink  ),
-    .tcdm_o         ( tcdm                      ),
-    .ctrl_i         ( streamer_ctrl             ),
-    .flags_o        ( streamer_flags            ),
-    .flags_fifo_o   ( flags_fifo                )
+    .clk_i          ( clk_i                      ),
+    .rst_ni         ( rst_ni                     ),
+    .test_mode_i    ( test_mode_i                ),
+    .enable_i       ( enable                     ),
+    .clear_i        ( clear                      ),
+    .vector_a_o     ( mxcore_vector_a.source     ),
+    .vectors_b_o    ( mxcore_vectors_b.source    ),
+    .scale_a_o      ( mxcore_scale_a.source      ),
+    .scale_b_o      ( mxcore_scale_b.source      ),
+    .preload_bias_o ( mxcore_preload_bias.source ),
+    .result_i       ( mxcore_result.sink         ),
+    .result_scale_i ( mxcore_result_scale.sink   ),
+    .tcdm_o         ( tcdm                       ),
+    .ctrl_i         ( streamer_ctrl              ),
+    .flags_o        ( streamer_flags             ),
+    .flags_fifo_o   ( flags_fifo                 )
   );
 
 endmodule : mxcore_hwpe_top

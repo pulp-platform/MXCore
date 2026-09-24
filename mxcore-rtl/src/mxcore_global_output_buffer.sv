@@ -24,6 +24,13 @@ module mxcore_global_output_buffer
   input  [NPE-1:0][DST_WIDTH-1:0] mxdotp_result_i,
   // Last Iteration Signal - Written Result is a Final Tile Result
   input  logic                    last_iter_i,
+  // Accumulator Preload
+  input  logic                    preload_i,
+  input  logic                    tile_end_i,
+  input  logic                    preload_bias_valid_i,
+  output logic                    preload_bias_ready_o,
+  input  [NPE-1:0][DST_WIDTH-1:0] preload_bias_i,
+  output logic                    preload_done_o,
   // Handshake Signals - Partial Results from the Output Buffer to MXDOTP Array
   output logic                    obuff_result_valid_o,
   input  logic                    obuff_result_ready_i,
@@ -58,6 +65,11 @@ module mxcore_global_output_buffer
 
   logic [NPE-1:0][DST_WIDTH-1:0]  read_data [Reuse];
 
+  // Preload Signals
+  logic [$clog2(Reuse+1)-1:0]     preload_count_d, preload_count_q;
+  logic                           preload_phase, write_free, write_fire;
+  logic [NPE-1:0][DST_WIDTH-1:0]  write_data;
+
   always_comb begin
     // Default Assignments
     status_d              = status_q;
@@ -68,13 +80,25 @@ module mxcore_global_output_buffer
     write_addr_d          = write_addr_q;
     read_addr_d           = read_addr_q;
     tile_addr_d           = tile_addr_q;
+    preload_count_d       = preload_count_q;
     // Write Port
-    mxdotp_result_ready_o = !status_q[write_addr_q];
-    if (mxdotp_result_valid_i && mxdotp_result_ready_o) begin
+    preload_phase        = preload_i && (preload_count_q < Reuse);
+    write_free            = !status_q[write_addr_q];
+    preload_bias_ready_o  = preload_phase && write_free;
+    mxdotp_result_ready_o = !preload_phase && write_free;
+    write_fire            = write_free && (preload_phase ? preload_bias_valid_i : mxdotp_result_valid_i);
+    write_data            = preload_phase ? preload_bias_i : mxdotp_result_i;
+    if (write_fire) begin
       write_enable                = 1'b1;
       status_d[write_addr_q]      = 1'b1;
-      tile_status_d[write_addr_q] = last_iter_i;
+      tile_status_d[write_addr_q] = preload_phase ? 1'b0 : last_iter_i;
       write_addr_d                = (write_addr_q == Reuse-1) ? '0 : write_addr_q + 1;
+      if (preload_phase) begin
+        preload_count_d = preload_count_q + 1;
+      end
+    end
+    if (tile_end_i) begin
+      preload_count_d = '0;
     end
     // Read - Port 1 - Partial Results
     obuff_result_valid_o = status_q[read_addr_q] && !tile_status_q[read_addr_q];
@@ -93,11 +117,12 @@ module mxcore_global_output_buffer
     end
   end
 
-  `FFARNC(status_q,       status_d,       clear_i, '0)
-  `FFARNC(tile_status_q,  tile_status_d,  clear_i, '0)
-  `FFARNC(write_addr_q,   write_addr_d,   clear_i, '0)
-  `FFARNC(read_addr_q,    read_addr_d,    clear_i, '0)
-  `FFARNC(tile_addr_q,    tile_addr_d,    clear_i, '0)
+  `FFARNC(status_q,        status_d,        clear_i, '0)
+  `FFARNC(tile_status_q,   tile_status_d,   clear_i, '0)
+  `FFARNC(write_addr_q,    write_addr_d,    clear_i, '0)
+  `FFARNC(read_addr_q,     read_addr_d,     clear_i, '0)
+  `FFARNC(tile_addr_q,     tile_addr_d,     clear_i, '0)
+  `FFARNC(preload_count_q, preload_count_d, clear_i, '0)
 
   generate
     for (genvar i = 0; i < Reuse; i++) begin : output_buffer_array
@@ -108,7 +133,7 @@ module mxcore_global_output_buffer
         .ReadEnable   ( read_enable || tile_read_enable     ),
         .ReadData     ( read_data[i]                        ),
         .WriteEnable  ( write_enable && (write_addr_q == i) ),
-        .WriteData    ( mxdotp_result_i                     )
+        .WriteData    ( write_data                          )
       );
     end
   endgenerate
@@ -116,5 +141,6 @@ module mxcore_global_output_buffer
   assign obuff_result_o = read_data [read_addr_q];
   assign tile_result_o  = read_data [tile_addr_q];
   assign empty_o        = ~|status_q;
+  assign preload_done_o = preload_i && (preload_count_q == Reuse);
 
 endmodule : mxcore_global_output_buffer

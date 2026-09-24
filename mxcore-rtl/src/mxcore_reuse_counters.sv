@@ -21,7 +21,8 @@ module mxcore_reuse_counters
   input  logic          count_out_i,
   // Iteration Status Signals
   output logic          first_iter_o,
-  output logic          last_iter_o
+  output logic          last_iter_o,
+  output logic          tile_end_o
 );
 
   logic [15:0] in_count_d, in_count_q;
@@ -47,5 +48,7 @@ module mxcore_reuse_counters
   assign first_iter_o = (in_count_q < Reuse);
   // Last iteration: Final Tile Results
   assign last_iter_o  = (out_count_q + Reuse >= ireuse_i);
+  // End of Tile: Last Result of the Tile
+  assign tile_end_o   = count_out_i && (out_count_q == ireuse_i - 1);
 
 endmodule : mxcore_reuse_counters

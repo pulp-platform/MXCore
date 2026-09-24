@@ -13,7 +13,7 @@ package mxcore_hwpe_package;
   parameter int unsigned NumCores               = 9;
   parameter int unsigned NumContext             = 1;
   parameter int unsigned IdWidth                = 3;
-  parameter int unsigned MXCoreIoRegs           = 13;
+  parameter int unsigned MXCoreIoRegs           = 16;
 
   // Input/Output Datawidths
   parameter int unsigned MXCoreVectorADataWidth       = VectorSize*SRC_WIDTH;
@@ -29,20 +29,23 @@ package mxcore_hwpe_package;
   parameter int unsigned MXCoreTCDMDataWidth           = `ifdef TCDM_BW `TCDM_BW `else 512 `endif;
 
   // Register File Map
-  parameter int unsigned MXCoreRegVectorAPtr      = 0;   // Vector A Pointer
-  parameter int unsigned MXCoreRegVectorsBPtr     = 1;   // Vectors B Pointer
-  parameter int unsigned MXCoreRegScaleAPtr       = 2;   // Scale A Pointer
-  parameter int unsigned MXCoreRegScaleBPtr       = 3;   // Scale B Pointer
-  parameter int unsigned MXCoreRegResultPtr       = 4;   // Result Pointer
-  parameter int unsigned MXCoreRegResultScalePtr  = 5;   // Result Scale Pointer
-  parameter int unsigned MXCoreRegGEMMSize        = 6;   // [9:0]: M, [21:10]: K, [31:22]: N
-  parameter int unsigned MXCoreRegCtrlEngine      = 7;   // Engine Control Parameters
-  parameter int unsigned MXCoreRegTileCounts      = 8;   // [3:0]: A_ROW_TILES = M/Reuse (< 16); [8:4]: B_COL_TILES = N/NPE (< 32);
-                                                              // [15:9]: INNER_TILES = K/VectorSize (< 128); [22:16]: INNER_BLOCKS = K/BlockSize or K/FP4BlockSize (< 128)
-  parameter int unsigned MXCoreRegATileSize       = 9;   // Reuse*VectorSize*W_A bits
-  parameter int unsigned MXCoreRegBTileSize       = 10;  // VectorSize*NPE*W_B bits
-  parameter int unsigned MXCoreRegResultTileSize  = 11;  // NPE*Reuse*W_RESULT bits
-  parameter int unsigned MXCoreRegIterCount       = 12;  // (K/VectorSize) * Reuse cycles (< 8192)
+  parameter int unsigned MXCoreRegVectorAPtr          = 0;   // Vector A Pointer
+  parameter int unsigned MXCoreRegVectorsBPtr         = 1;   // Vectors B Pointer
+  parameter int unsigned MXCoreRegScaleAPtr           = 2;   // Scale A Pointer
+  parameter int unsigned MXCoreRegScaleBPtr           = 3;   // Scale B Pointer
+  parameter int unsigned MXCoreRegPreloadBiasPtr      = 4;   // Preload Bias Pointer
+  parameter int unsigned MXCoreRegResultPtr           = 5;   // Result Pointer
+  parameter int unsigned MXCoreRegResultScalePtr      = 6;   // Result Scale Pointer
+  parameter int unsigned MXCoreRegGEMMSize            = 7;   // [9:0]: M, [21:10]: K, [31:22]: N
+  parameter int unsigned MXCoreRegCtrlEngine          = 8;   // Engine Control Parameters
+  parameter int unsigned MXCoreRegTileCounts          = 9;   // [3:0]: A_ROW_TILES = M/Reuse (< 16); [8:4]: B_COL_TILES = N/NPE (< 32);
+                                                                  // [15:9]: INNER_TILES = K/VectorSize (< 128); [22:16]: INNER_BLOCKS = K/BlockSize or K/FP4BlockSize (< 128)
+  parameter int unsigned MXCoreRegATileSize           = 10;  // Reuse*VectorSize*W_A bits
+  parameter int unsigned MXCoreRegBTileSize           = 11;  // VectorSize*NPE*W_B bits
+  parameter int unsigned MXCoreRegPreloadTileSize     = 12;  // NPE*Reuse*W_PRELOAD bits
+  parameter int unsigned MXCoreRegResultTileSize      = 13;  // NPE*Reuse*W_RESULT bits
+  parameter int unsigned MXCoreRegResultScaleTileSize = 14;  // (NPE/BlockSize)*Reuse*SCALE_WIDTH bits
+  parameter int unsigned MXCoreRegIterCount           = 15;  // (K/VectorSize) * Reuse cycles (< 8192)
 
   typedef struct packed {
     fpnew_pkg::roundmode_e    rnd_mode; // [2:0] (3)          // REG_CTRL_ENGINE[2:0]
@@ -57,8 +60,10 @@ package mxcore_hwpe_package;
     logic                     quantize_bf16; // (1)           // REG_CTRL_ENGINE[21]
     logic                     quantize_mxfp8; // (1)          // REG_CTRL_ENGINE[22]
     logic                     block_poison_enable; // (1)     // REG_CTRL_ENGINE[23]
+    logic                     preload; // (1)                 // REG_CTRL_ENGINE[24]
     logic [15:0]              iter_count;                     // REG_ITER_COUNT: per-output-tile iteration count
     logic                     sbmat_lt_bw;                    // If Scale B Matrix is smaller than TCDM BW (a single transaction)
+    logic                     compute_en;                     // Compute enable (gated by the Preload state)
     logic [31:0]              result_scale_tot_pushes;        // Total M*N/NPE pushes expected into the result scale merge buffer
   } ctrl_engine_t;
 
@@ -69,6 +74,8 @@ package mxcore_hwpe_package;
     logic                         mask;
     logic                         aux;
     logic                         busy;
+    logic                         preload_done;
+    logic                         tile_end;
   } flags_engine_t;
 
   typedef struct packed {
@@ -76,6 +83,7 @@ package mxcore_hwpe_package;
     hci_package::hci_streamer_ctrl_t  vectors_b_source_ctrl;
     hci_package::hci_streamer_ctrl_t  scale_a_source_ctrl;
     hci_package::hci_streamer_ctrl_t  scale_b_source_ctrl;
+    hci_package::hci_streamer_ctrl_t  preload_bias_source_ctrl;
     hci_package::hci_streamer_ctrl_t  result_sink_ctrl;
     hci_package::hci_streamer_ctrl_t  result_scale_sink_ctrl;
   } ctrl_streamer_t;
@@ -85,12 +93,15 @@ package mxcore_hwpe_package;
     hci_package::hci_streamer_flags_t vectors_b_source_flags;
     hci_package::hci_streamer_flags_t scale_a_source_flags;
     hci_package::hci_streamer_flags_t scale_b_source_flags;
+    hci_package::hci_streamer_flags_t preload_bias_source_flags;
     hci_package::hci_streamer_flags_t result_sink_flags;
     hci_package::hci_streamer_flags_t result_scale_sink_flags;
   } flags_streamer_t;
 
   typedef enum logic  [1:0] {
     MXCoreIdle,
+    Preload,
+    Compute,
     Done
   } engine_state_t;
 

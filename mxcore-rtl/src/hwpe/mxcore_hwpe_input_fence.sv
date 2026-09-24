@@ -59,10 +59,28 @@ module mxcore_hwpe_input_fence
     .pop_o          ( fenced_streams    )
   );
 
-  hwpe_stream_assign i_split_vector_a_assign    ( .push_i (vector_a_i), .pop_o(split_streams[0])  );
-  hwpe_stream_assign i_split_vectors_b_assign   ( .push_i (vectors_b_i), .pop_o(split_streams[1]) );
-  hwpe_stream_assign i_split_scale_a_assign     ( .push_i (scale_a_i), .pop_o(split_streams[2])   );
-  hwpe_stream_assign i_split_scale_b_assign     ( .push_i (scale_b_i), .pop_o(split_streams[3])   );
+  logic fence_ready;
+  assign fence_ready = fenced_streams[0].ready && fenced_streams[1].ready && fenced_streams[2].ready && fenced_streams[3].ready;
+
+  assign split_streams[0].valid = vector_a_i.valid && fence_ready;
+  assign split_streams[0].data  = vector_a_i.data;
+  assign split_streams[0].strb  = vector_a_i.strb;
+  assign vector_a_i.ready       = split_streams[0].ready;
+
+  assign split_streams[1].valid = vectors_b_i.valid && fence_ready;
+  assign split_streams[1].data  = vectors_b_i.data;
+  assign split_streams[1].strb  = vectors_b_i.strb;
+  assign vectors_b_i.ready      = split_streams[1].ready;
+
+  assign split_streams[2].valid = scale_a_i.valid && fence_ready;
+  assign split_streams[2].data  = scale_a_i.data;
+  assign split_streams[2].strb  = scale_a_i.strb;
+  assign scale_a_i.ready        = split_streams[2].ready;
+
+  assign split_streams[3].valid = scale_b_i.valid && fence_ready;
+  assign split_streams[3].data  = scale_b_i.data;
+  assign split_streams[3].strb  = scale_b_i.strb;
+  assign scale_b_i.ready        = split_streams[3].ready;
 
   hwpe_stream_assign i_fenced_vector_a_assign   ( .push_i (fenced_streams[0]), .pop_o(vector_a_o) );
   hwpe_stream_assign i_fenced_vectors_b_assign  ( .push_i (fenced_streams[1]), .pop_o(vectors_b_o));
