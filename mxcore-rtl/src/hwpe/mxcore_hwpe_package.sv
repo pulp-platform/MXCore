@@ -39,7 +39,8 @@ package mxcore_hwpe_package;
   parameter int unsigned MXCoreRegGEMMSize            = 7;   // [9:0]: M, [21:10]: K, [31:22]: N
   parameter int unsigned MXCoreRegCtrlEngine          = 8;   // Engine Control Parameters
   parameter int unsigned MXCoreRegTileCounts          = 9;   // [3:0]: A_ROW_TILES = M/Reuse (< 16); [8:4]: B_COL_TILES = N/NPE (< 32);
-                                                                  // [15:9]: INNER_TILES = K/VectorSize (< 128); [22:16]: INNER_BLOCKS = K/BlockSize or K/FP4BlockSize (< 128)
+                                                                  // [15:9]: INNER_TILES = K/VectorSize (< 128); [22:16]: INNER_BLOCKS = K/BlockSize or K/FP4BlockSize (< 128);
+                                                                  // [28:23]: SA_VEC_PER_BLOCK = min(BlockSize/VectorSize, K-iterations per tile) (<= 32)
   parameter int unsigned MXCoreRegATileSize           = 10;  // Reuse*VectorSize*W_A bits
   parameter int unsigned MXCoreRegBTileSize           = 11;  // VectorSize*NPE*W_B bits
   parameter int unsigned MXCoreRegPreloadTileSize     = 12;  // NPE*Reuse*W_PRELOAD bits
@@ -74,7 +75,7 @@ package mxcore_hwpe_package;
     logic                         mask;
     logic                         aux;
     logic                         busy;
-    logic                         preload_done;
+    logic                         preload_ready;
     logic                         tile_end;
   } flags_engine_t;
 

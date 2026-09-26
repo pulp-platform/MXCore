@@ -73,12 +73,14 @@ module mxcore_hwpe_ctrl
   logic [31:0]  A_TILE_SIZE_REG, B_TILE_SIZE_REG, PRELOAD_TILE_SIZE_REG, RESULT_TILE_SIZE_REG, RESULT_SCALE_TILE_SIZE_REG;
   logic [31:0]  A_MAT_SIZE, B_MAT_SIZE, SA_MAT_SIZE, SB_MAT_SIZE, RESULT_SCALE_MAT_SIZE;
   logic [31:0]  A_ROW_TILE_SIZE, SA_ROW_TILE_SIZE;
+  logic [5:0]   SA_VEC_PER_BLOCK;
   logic [31:0]  TOT_TILES;
   logic [31:0]  ITER_COUNT;
   assign A_ROW_TILES                = reg_file.hwpe_params[MXCoreRegTileCounts][3:0];
   assign B_COL_TILES                = reg_file.hwpe_params[MXCoreRegTileCounts][8:4];
   assign INNER_TILES                = reg_file.hwpe_params[MXCoreRegTileCounts][15:9];
   assign INNER_BLOCKS               = reg_file.hwpe_params[MXCoreRegTileCounts][22:16];
+  assign SA_VEC_PER_BLOCK           = reg_file.hwpe_params[MXCoreRegTileCounts][28:23];
   assign A_TILE_SIZE_REG            = reg_file.hwpe_params[MXCoreRegATileSize];
   assign B_TILE_SIZE_REG            = reg_file.hwpe_params[MXCoreRegBTileSize];
   assign PRELOAD_TILE_SIZE_REG      = reg_file.hwpe_params[MXCoreRegPreloadTileSize];
@@ -170,11 +172,11 @@ module mxcore_hwpe_ctrl
     B_DIM_ENABLE        = 4'b0001;
     // // ----------------------- Scale Matrix A ----------------------- // //
     if (SATILE_GT_BW) begin
-      SCALE_A_TOT_LEN     = (SA_TILE_SIZE * VEC_PER_BLOCK * INNER_BLOCKS * B_COL_TILES) / MXCoreTCDMDataWidth;
+      SCALE_A_TOT_LEN     = (SA_TILE_SIZE * SA_VEC_PER_BLOCK * INNER_BLOCKS * B_COL_TILES) / MXCoreTCDMDataWidth;
       SCALE_A_D0_STRIDE   = MXCoreTCDMDataWidth / 8;
       SCALE_A_D0_LEN      = SA_TILE_SIZE / MXCoreTCDMDataWidth;
       SCALE_A_D1_STRIDE   = '0;
-      SCALE_A_D1_LEN      = VEC_PER_BLOCK;
+      SCALE_A_D1_LEN      = SA_VEC_PER_BLOCK;
       SCALE_A_D2_STRIDE   = SA_TILE_SIZE / 8;
       SCALE_A_D2_LEN      = INNER_BLOCKS;
       SCALE_A_D3_STRIDE   = '0;
@@ -251,7 +253,7 @@ module mxcore_hwpe_ctrl
         end
       end
       Preload: begin
-        if (flags_engine_i.preload_done) begin
+        if (flags_engine_i.preload_ready) begin
           state_d = Compute;
         end
       end

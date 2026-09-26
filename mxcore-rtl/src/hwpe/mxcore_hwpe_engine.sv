@@ -103,7 +103,7 @@ module mxcore_hwpe_engine
     .aux_o                ( flags_o.aux           ),
     .out_valid_o          ( output_valid          ),
     .out_ready_i          ( output_ready          ),
-    .preload_done_o       ( flags_o.preload_done  ),
+    .preload_ready_o      ( flags_o.preload_ready ),
     .tile_end_o           ( flags_o.tile_end      ),
     .busy_o               ( flags_o.busy          )
   );

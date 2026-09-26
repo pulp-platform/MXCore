@@ -23,7 +23,7 @@ ALL_FORMATS := FP8 FP8ALT FP6 FP6ALT FP4
 enabled_formats ?= FP8 FP8ALT
 
 # Source and Destination Data Formats
-src_fmt ?= FP4
+src_fmt ?= FP8
 dst_fmt ?= FP32
 block_size ?= 32
 # MXCore Configuration
@@ -36,7 +36,7 @@ tcdm_bw ?= 512
 quantize_mxfp8 ?= 1
 quantize_bf16 ?= 0
 # Accumulator Preload
-preload ?= 0
+preload ?= 1
 # Stalling in TB
 no_stalls ?= 1
 prob_stall ?= 10 # 10% stall probability
@@ -69,6 +69,9 @@ vlog_defs += -DSRC_FMT="\"$(src_fmt)\"" -DDST_FMT="\"$(dst_fmt)\""
 vlog_defs += -DVECTOR_SIZE=$(vector_size) -DNPE=$(num_compute_units) -DREUSE=$(num_out_buffers) -DNUM_PIPE_REGS=$(num_pipe_regs) -DTCDM_BW=$(tcdm_bw)
 vlog_defs += -DM=$(mdim) -DK=$(kdim) -DN=$(ndim) -DQUANTIZE_MXFP8=$(quantize_mxfp8) -DQUANTIZE_BF16=$(quantize_bf16) -DPRELOAD=$(preload)
 vlog_defs += -DPROB_STALL=$(prob_stall) -DNO_STALLS=$(no_stalls)
+ifdef preload_threshold
+	vlog_defs += -DPRELOAD_THRESHOLD=$(preload_threshold)
+endif
 
 ifeq ($(target), tb_mxcore_hwpe)
 	BENDER_TARGETS += -t mxcore_hwpe -t mxcore_hwpe_test

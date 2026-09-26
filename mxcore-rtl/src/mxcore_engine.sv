@@ -21,7 +21,7 @@ module mxcore_engine
   input  logic [NPE-1:0][DST_WIDTH-1:0]                 operand_d_i,
   hwpe_stream_intf_stream.sink                          preload_bias_i,
   // Input Control/Configuration Signals
-  input  logic [NUM_FORMATS-1:0][NumOperands-1:0]      is_boxed_i,
+  input  logic [NUM_FORMATS-1:0][NumOperands-1:0]       is_boxed_i,
   input  fpnew_pkg::roundmode_e                         rnd_mode_i,
   input  fpnew_pkg::operation_e                         op_i,
   input  logic                                          op_mod_i,
@@ -50,7 +50,7 @@ module mxcore_engine
   output logic [NPE-1:0]                                out_valid_o,
   input  logic [NPE-1:0]                                out_ready_i,
   // Preload Status Signals
-  output logic                                          preload_done_o,
+  output logic                                          preload_ready_o,
   output logic                                          tile_end_o,
   // Indication of valid data in flight
   output logic                                          busy_o
@@ -173,7 +173,7 @@ module mxcore_engine
     .preload_bias_valid_i     ( preload_bias_i.valid  ),
     .preload_bias_ready_o     ( preload_bias_i.ready  ),
     .preload_bias_i           ( preload_bias_i.data   ),
-    .preload_done_o           ( preload_done_o        ),
+    .preload_ready_o          ( preload_ready_o       ),
     .obuff_result_valid_o     ( obuff_result_valid    ),
     .obuff_result_ready_i     ( obuff_result_ready    ),
     .obuff_result_o           ( obuff_result          ),
