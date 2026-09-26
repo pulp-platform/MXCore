@@ -30,6 +30,8 @@ module mxcore_hwpe_streamer
     // Scales Stream + Handshake
     hwpe_stream_intf_stream.source  scale_a_o,
     hwpe_stream_intf_stream.source  scale_b_o,
+    // Preload Bias Stream + Handshake
+    hwpe_stream_intf_stream.source  preload_bias_o,
     // Result Stream + Handshake
     hwpe_stream_intf_stream.sink    result_i,
     hwpe_stream_intf_stream.sink    result_scale_i,
@@ -55,6 +57,7 @@ module mxcore_hwpe_streamer
   `HCI_INTF_EXPLICIT_PARAM(tcdm_vectors_b, clk_i, HCI_SIZE_tcdm_dw);
   `HCI_INTF_EXPLICIT_PARAM(tcdm_scale_a, clk_i, HCI_SIZE_tcdm_dw);
   `HCI_INTF_EXPLICIT_PARAM(tcdm_scale_b, clk_i, HCI_SIZE_tcdm_dw);
+  `HCI_INTF_EXPLICIT_PARAM(tcdm_preload_bias, clk_i, HCI_SIZE_tcdm_dw);
   `HCI_INTF_EXPLICIT_PARAM(tcdm_result, clk_i, HCI_SIZE_tcdm_dw);
 
   localparam hci_size_parameter_t `HCI_SIZE_PARAM(virt_tcdm) = '{
@@ -66,25 +69,26 @@ module mxcore_hwpe_streamer
     EW:     DEFAULT_EW,
     EHW:    DEFAULT_EHW
   };
-  `HCI_INTF_ARRAY(virt_tcdm, clk_i, 0:4);
+  `HCI_INTF_ARRAY(virt_tcdm, clk_i, 0:5);
 
   `HCI_INTF_EXPLICIT_PARAM(ldst_tcdm, clk_i, HCI_SIZE_tcdm_dw);
 
-  hci_core_assign i_load_vector_a_assign  ( .tcdm_target (tcdm_vector_a),   .tcdm_initiator (virt_tcdm[0]) );
-  hci_core_assign i_load_vectors_b_assign ( .tcdm_target (tcdm_vectors_b),  .tcdm_initiator (virt_tcdm[1]) );
-  hci_core_assign i_load_scale_a_assign   ( .tcdm_target (tcdm_scale_a),    .tcdm_initiator (virt_tcdm[2]) );
-  hci_core_assign i_load_scale_b_assign   ( .tcdm_target (tcdm_scale_b),    .tcdm_initiator (virt_tcdm[3]) );
-  hci_core_assign i_store_result_assign   ( .tcdm_target (tcdm_result),     .tcdm_initiator (virt_tcdm[4]) );
+  hci_core_assign i_load_vector_a_assign      ( .tcdm_target (tcdm_vector_a),     .tcdm_initiator (virt_tcdm[0]) );
+  hci_core_assign i_load_vectors_b_assign     ( .tcdm_target (tcdm_vectors_b),    .tcdm_initiator (virt_tcdm[1]) );
+  hci_core_assign i_load_scale_a_assign       ( .tcdm_target (tcdm_scale_a),      .tcdm_initiator (virt_tcdm[2]) );
+  hci_core_assign i_load_scale_b_assign       ( .tcdm_target (tcdm_scale_b),      .tcdm_initiator (virt_tcdm[3]) );
+  hci_core_assign i_store_result_assign       ( .tcdm_target (tcdm_result),       .tcdm_initiator (virt_tcdm[4]) );
+  hci_core_assign i_load_preload_bias_assign  ( .tcdm_target (tcdm_preload_bias), .tcdm_initiator (virt_tcdm[5]) );
 
   hci_core_mux_ooo #(
-    .NB_CHAN ( 5 ),
+    .NB_CHAN ( 6 ),
     .`HCI_SIZE_PARAM(out) ( `HCI_SIZE_PARAM(tcdm_dw) )
   ) i_ldst_mux (
     .clk_i              ( clk_i     ),
     .rst_ni             ( rst_ni    ),
     .clear_i            ( clear_i   ),
     .priority_force_i   ( 1'b1      ),
-    .priority_i         ( {3'h4, 3'h3, 3'h2, 3'h1, 3'h0} ), // Vector A > Vector B > Scale A > Scale B > Result
+    .priority_i         ( {3'h4, 3'h3, 3'h2, 3'h1, 3'h0, 3'h5} ), // Preload Bias > Vector A > Vector B > Scale A > Scale B > Result
     .in                 ( virt_tcdm ),
     .out                ( ldst_tcdm )
   );
@@ -161,6 +165,22 @@ module mxcore_hwpe_streamer
     .EW  ( HCI_SIZE_tcdm_dw.EW  ),
     .EHW ( HCI_SIZE_tcdm_dw.EHW )
   ) tcdm_scale_b_fifo (
+    .clk ( clk_i )
+  );
+
+  hci_core_intf #(
+  `ifndef SYNTHESIS
+    .WAIVE_RQ4_ASSERT  (    1'b1 ),
+    .WAIVE_RSP3_ASSERT (    1'b1 ),
+  `endif
+    .DW  ( HCI_SIZE_tcdm_dw.DW  ),
+    .AW  ( HCI_SIZE_tcdm_dw.AW  ),
+    .BW  ( HCI_SIZE_tcdm_dw.BW  ),
+    .UW  ( HCI_SIZE_tcdm_dw.UW  ),
+    .IW  ( HCI_SIZE_tcdm_dw.IW  ),
+    .EW  ( HCI_SIZE_tcdm_dw.EW  ),
+    .EHW ( HCI_SIZE_tcdm_dw.EHW )
+  ) tcdm_preload_bias_fifo (
     .clk ( clk_i )
   );
 
@@ -294,6 +314,21 @@ module mxcore_hwpe_streamer
     .flags_o     ( flags_o.scale_b_source_flags   )
   );
 
+  hci_core_source #(
+    .MISALIGNED_ACCESSES    ( REALIGN ),
+    .`HCI_SIZE_PARAM(tcdm)  ( `HCI_SIZE_PARAM(tcdm_dw) )
+  ) i_preload_bias_stream_source (
+    .clk_i       ( clk_i                              ),
+    .rst_ni      ( rst_ni                             ),
+    .test_mode_i ( test_mode_i                        ),
+    .clear_i     ( clear_i                            ),
+    .enable_i    ( enable_i                           ),
+    .tcdm        ( tcdm_preload_bias_fifo             ),
+    .stream      ( preload_bias_o                     ),
+    .ctrl_i      ( ctrl_i.preload_bias_source_ctrl    ),
+    .flags_o     ( flags_o.preload_bias_source_flags  )
+  );
+
   hci_core_sink #(
     .MISALIGNED_ACCESSES    ( REALIGN ),
     .`HCI_SIZE_PARAM(tcdm)  ( `HCI_SIZE_PARAM(tcdm_dw) )
@@ -370,6 +405,18 @@ module mxcore_hwpe_streamer
     .flags_o        (                       ),
     .tcdm_target    ( tcdm_scale_b_fifo     ),
     .tcdm_initiator ( tcdm_scale_b          )
+  );
+
+  hci_core_fifo #(
+    .FIFO_DEPTH ( 2 ),
+    .`HCI_SIZE_PARAM(tcdm_initiator) ( `HCI_SIZE_PARAM(tcdm_dw) )
+  ) i_tcdm_preload_bias_fifo (
+    .clk_i          ( clk_i                   ),
+    .rst_ni         ( rst_ni                  ),
+    .clear_i        ( clear_i                 ),
+    .flags_o        (                         ),
+    .tcdm_target    ( tcdm_preload_bias_fifo  ),
+    .tcdm_initiator ( tcdm_preload_bias       )
   );
 
   hci_core_fifo #(

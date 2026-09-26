@@ -13,6 +13,8 @@ package mxcore_package;
   parameter int unsigned    Reuse       = `ifdef REUSE `REUSE `else 64 `endif;
   parameter int unsigned    NumPipeRegs = `ifdef NUM_PIPE_REGS `NUM_PIPE_REGS `else 4 `endif;
 
+  parameter int unsigned    PreloadThreshold  = `ifdef PRELOAD_THRESHOLD `PRELOAD_THRESHOLD `else (Reuse / 2) `endif;
+
   parameter type                     TagType     = logic;
   parameter type                     AuxType     = logic;
   parameter fpnew_pkg::pipe_config_t PipeConfig  = fpnew_pkg::BEFORE;

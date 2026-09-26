@@ -214,7 +214,7 @@ def generate_compile_tcl(cfg, defaults, workdir):
         "--define", "HCI_ASSERT_DELAY=#41ps",
     ]
 
-    cmd = ["bender", "script", "vsim"] + bender_args
+    cmd = [str(REPO_ROOT / "install" / "bender" / "bender"), "script", "vsim"] + bender_args
     result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, cwd=str(REPO_ROOT))
     if result.returncode != 0:
         raise RuntimeError(f"bender failed: {result.stderr}")
