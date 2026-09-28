@@ -55,7 +55,7 @@ module mxcore_mxdotp_array
 
   generate
     for (genvar i = 0; i < NPE; i++) begin : mxdotp_array
-      fpnew_mxdotp_multi #(
+      fpnew_mxdotp_multi_flatten #(
         .FpSrcFmtConfig   ( EnMxdotpSrcFpFmtConfig  ),
         .IntSrcFmtConfig  ( EnMxdotpSrcIntFmtConfig ),
         .FpDstFmtConfig   ( EnMxdotpDstFpFmtConfig  ),
