@@ -771,7 +771,7 @@ def write_to_memory_debug(fp9_matrix_a, fp9_matrix_b, scale_matrix_a, scale_matr
                 f"Address = line_number × {bpl}\n")
         f.write(f"Data type: {data_type}  ({bits_per_elem} bits/element)\n")
 
-        preload_tag = " | Preload" if preload_matrix is not None else ""
+        preload_tag = " | C (Preload, overwritten by Result)" if preload_matrix is not None else ""
         section(f"data_memory  (layout: A section | B section | Scale A | Scale B{preload_tag})")
 
         line = 0
@@ -882,7 +882,7 @@ def write_to_memory_debug(fp9_matrix_a, fp9_matrix_b, scale_matrix_a, scale_matr
         if preload_matrix is not None:
             preload_len = mdim * ndim
             f.write(f"--- Preload Accumulator  ({mdim}×{ndim}, FP32, one word/element)  "
-                    f"[tile-row-major order like result] ---\n\n")
+                    f"[tile-row-major order like result, Result Ptr = Preload Ptr] ---\n\n")
             f.write(f"    {_h(_addr(line))}: Preload begins\n")
             f.write(f"    {_h(_addr(line + preload_len - 1))}: Preload ends\n\n")
             line += preload_len

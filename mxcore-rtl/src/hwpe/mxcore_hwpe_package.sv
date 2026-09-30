@@ -11,7 +11,7 @@ package mxcore_hwpe_package;
 
   // HWPE Configuration
   parameter int unsigned NumCores               = 9;
-  parameter int unsigned NumContext             = 1;
+  parameter int unsigned NumContext             = `ifdef N_CONTEXT `N_CONTEXT `else 2 `endif;
   parameter int unsigned IdWidth                = 3;
   parameter int unsigned MXCoreIoRegs           = 16;
 
@@ -64,9 +64,20 @@ package mxcore_hwpe_package;
     logic                     preload; // (1)                 // REG_CTRL_ENGINE[24]
     logic [15:0]              iter_count;                     // REG_ITER_COUNT: per-output-tile iteration count
     logic                     sbmat_lt_bw;                    // If Scale B Matrix is smaller than TCDM BW (a single transaction)
-    logic                     compute_en;                     // Compute enable (gated by the Preload state)
+    logic                     compute_en;                     // Compute enable (gated by the tile preload phase)
     logic [31:0]              result_scale_tot_pushes;        // Total M*N/NPE pushes expected into the result scale merge buffer
   } ctrl_engine_t;
+
+  typedef struct packed {
+    logic                     quantize_bf16;
+    logic                     quantize_mxfp8;
+    logic                     block_poison_enable;
+    logic [31:0]              result_scale_tot_pushes;
+    logic [31:0]              result_addr;
+    logic [31:0]              result_scale_addr;
+    logic [31:0]              result_tot_len;
+    logic [31:0]              result_scale_tot_len;
+  } ctrl_output_t;
 
   typedef struct packed {
     fpnew_pkg::status_t [NPE-1:0] status;
@@ -101,9 +112,9 @@ package mxcore_hwpe_package;
 
   typedef enum logic  [1:0] {
     MXCoreIdle,
-    Preload,
-    Compute,
-    Done
+    ComputeOnly,
+    ComputeAndOutput,
+    Output
   } engine_state_t;
 
 endpackage : mxcore_hwpe_package

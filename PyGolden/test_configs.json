@@ -2142,6 +2142,276 @@
       "tags": [
         "full"
       ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 64,
+      "K": 64,
+      "N": 64,
+      "quantize": 0,
+      "no_stalls": 0,
+      "num_jobs": 2,
+      "tags": [
+        "multictx"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 64,
+      "K": 64,
+      "N": 64,
+      "quantize": 0,
+      "no_stalls": 1,
+      "num_jobs": 2,
+      "tags": [
+        "multictx"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 64,
+      "K": 64,
+      "N": 64,
+      "quantize": 1,
+      "no_stalls": 0,
+      "num_jobs": 2,
+      "tags": [
+        "multictx"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 64,
+      "K": 64,
+      "N": 64,
+      "quantize": 1,
+      "no_stalls": 1,
+      "num_jobs": 2,
+      "tags": [
+        "multictx"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 0,
+      "num_jobs": 2,
+      "tags": [
+        "multictx"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 1,
+      "num_jobs": 2,
+      "tags": [
+        "multictx"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 0,
+      "num_jobs": 2,
+      "tags": [
+        "multictx"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 1,
+      "num_jobs": 2,
+      "tags": [
+        "multictx"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 64,
+      "K": 64,
+      "N": 64,
+      "quantize": 0,
+      "no_stalls": 0,
+      "num_jobs": 2,
+      "tags": [
+        "multictx"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 64,
+      "K": 64,
+      "N": 64,
+      "quantize": 0,
+      "no_stalls": 1,
+      "num_jobs": 2,
+      "tags": [
+        "multictx"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 64,
+      "K": 64,
+      "N": 64,
+      "quantize": 1,
+      "no_stalls": 0,
+      "num_jobs": 2,
+      "tags": [
+        "multictx"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 64,
+      "K": 64,
+      "N": 64,
+      "quantize": 1,
+      "no_stalls": 1,
+      "num_jobs": 2,
+      "tags": [
+        "multictx"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 0,
+      "num_jobs": 2,
+      "tags": [
+        "multictx"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 1,
+      "num_jobs": 2,
+      "tags": [
+        "multictx"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 0,
+      "num_jobs": 2,
+      "tags": [
+        "multictx"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 1,
+      "num_jobs": 2,
+      "tags": [
+        "multictx"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 64,
+      "K": 64,
+      "N": 64,
+      "quantize": 1,
+      "no_stalls": 1,
+      "num_jobs": 3,
+      "tags": [
+        "multictx"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "no_stalls": 0,
+      "num_jobs": 3,
+      "tags": [
+        "multictx"
+      ]
     }
   ]
 }
