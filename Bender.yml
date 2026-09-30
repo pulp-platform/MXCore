@@ -35,10 +35,13 @@ sources:
       EN_FP4: 1
     files:
       - mxcore-rtl/src/mxcore_package.sv
-      - mxcore-rtl/src/mxcore_mxdotp_array.sv
-      - mxcore-rtl/src/mxcore_register_file_1r_1w_1row.sv
+      - mxcore-rtl/src/mxcore_register_file_1r_1w.sv
+      - mxcore-rtl/src/mxcore_register_file_2r_2w.sv
       - mxcore-rtl/src/mxcore_reuse_counters.sv
-      - mxcore-rtl/src/mxcore_global_output_buffer.sv
+      - mxcore-rtl/src/mxcore_b_buffer_ctrl.sv
+      - mxcore-rtl/src/mxcore_output_buffer_ctrl.sv
+      - mxcore-rtl/src/mxcore_pe.sv
+      - mxcore-rtl/src/mxcore_pe_array.sv
       - mxcore-rtl/src/mxcore_engine.sv
     # MXCore HWPE Sources
       - target: mxcore_hwpe
@@ -54,11 +57,8 @@ sources:
           - mxcore-rtl/src/hwpe/mxcore_hwpe_ctrl.sv
           - mxcore-rtl/src/hwpe/mxcore_hwpe_fifo_buffer.sv
           - mxcore-rtl/src/hwpe/mxcore_hwpe_fifo_scale_buffer.sv
-          - mxcore-rtl/src/hwpe/mxcore_hwpe_multi_fifo_buffer.sv
-          - mxcore-rtl/src/hwpe/mxcore_hwpe_multi_fifo_scale_buffer.sv
           - mxcore-rtl/src/hwpe/mxcore_hwpe_result_fifo_buffer.sv
           - mxcore-rtl/src/hwpe/mxcore_hwpe_result_scale_fifo_buffer.sv
-          - mxcore-rtl/src/hwpe/mxcore_hwpe_input_fence.sv
           - mxcore-rtl/src/hwpe/mxcore_hwpe_top.sv
           - mxcore-rtl/src/hwpe/mxcore_hwpe_wrap.sv
 

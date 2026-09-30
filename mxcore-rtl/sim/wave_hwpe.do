@@ -6,46 +6,42 @@
 
 onerror {resume}
 quietly WaveActivateNextPane {} 0
-add wave -noupdate /tb_mxcore_hwpe/dut/i_mxcore/i_input_fence/vector_a_o/clk
-add wave -noupdate -expand -group MXCore_HWPE_Engine /tb_mxcore_hwpe/dut/i_mxcore/i_engine/operands_a
-add wave -noupdate -expand -group MXCore_HWPE_Engine /tb_mxcore_hwpe/dut/i_mxcore/i_engine/operands_b
-add wave -noupdate -expand -group MXCore_HWPE_Engine -label scale_a /tb_mxcore_hwpe/dut/i_mxcore/i_engine/scale_a_i/data
-add wave -noupdate -expand -group MXCore_HWPE_Engine -label scale_b /tb_mxcore_hwpe/dut/i_mxcore/i_engine/scale_b_i/data
-add wave -noupdate -expand -group MXCore_HWPE_Engine /tb_mxcore_hwpe/dut/i_mxcore/i_engine/inputs_valid
-add wave -noupdate -expand -group MXCore_HWPE_Engine /tb_mxcore_hwpe/dut/i_mxcore/i_engine/inputs_ready
-add wave -noupdate -expand -group MXCore_HWPE_Engine /tb_mxcore_hwpe/dut/i_mxcore/i_engine/output_valid
-add wave -noupdate -expand -group MXCore_HWPE_Engine /tb_mxcore_hwpe/dut/i_mxcore/i_engine/output_ready
-add wave -noupdate -expand -group MXCore_HWPE_Engine -group MXDOTP_Array /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/operands_a
-add wave -noupdate -expand -group MXCore_HWPE_Engine -group MXDOTP_Array /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/operands_b
-add wave -noupdate -expand -group MXCore_HWPE_Engine -group MXDOTP_Array /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/operands_c
-add wave -noupdate -expand -group MXCore_HWPE_Engine -group MXDOTP_Array /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/operand_d
-add wave -noupdate -expand -group MXCore_HWPE_Engine -group MXDOTP_Array /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/in_valid_i
-add wave -noupdate -expand -group MXCore_HWPE_Engine -group MXDOTP_Array /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/in_ready_o
-add wave -noupdate -expand -group MXCore_HWPE_Engine -group MXDOTP_Array /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_mxdotp_array/result_o
-add wave -noupdate -expand -group MXCore_HWPE_Engine -group MXDOTP_Array /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/mxdotp_result_valid
-add wave -noupdate -expand -group MXCore_HWPE_Engine -group MXDOTP_Array /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/out_valid_o
-add wave -noupdate -expand -group MXCore_HWPE_Engine -group MXDOTP_Array /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/out_ready_i
+add wave -noupdate /tb_mxcore_hwpe/dut/i_mxcore/i_engine/clk_i
+add wave -noupdate -expand -group MXCore_Engine /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/vector_a
+add wave -noupdate -expand -group MXCore_Engine /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/scale_a
+add wave -noupdate -expand -group MXCore_Engine /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/vector_b_valid
+add wave -noupdate -expand -group MXCore_Engine /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/scale_b_valid
+add wave -noupdate -expand -group MXCore_Engine /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/inputs_valid
+add wave -noupdate -expand -group MXCore_Engine /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/in_accept
+add wave -noupdate -expand -group MXCore_Engine /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/in_fire
+add wave -noupdate -expand -group MXCore_Engine /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/out_fire
+add wave -noupdate -expand -group MXCore_Engine -group PE_Array /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_pe_array/in_valid_i
+add wave -noupdate -expand -group MXCore_Engine -group PE_Array /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_pe_array/in_ready_o
+add wave -noupdate -expand -group MXCore_Engine -group PE_Array /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_pe_array/out_valid_o
+add wave -noupdate -expand -group MXCore_Engine -group PE_Array /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_pe_array/out_ready_i
+add wave -noupdate -expand -group MXCore_Engine -group PE_Array /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_pe_array/tile_result_o
+add wave -noupdate -expand -group MXCore_Engine -group PE_Array /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_pe_array/busy_o
+add wave -noupdate -expand -group MXCore_Engine -group PE_Array -group PE_0 {/tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_pe_array/gen_pe[0]/i_pe/vector_b}
+add wave -noupdate -expand -group MXCore_Engine -group PE_Array -group PE_0 {/tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_pe_array/gen_pe[0]/i_pe/scale_b}
+add wave -noupdate -expand -group MXCore_Engine -group PE_Array -group PE_0 {/tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_pe_array/gen_pe[0]/i_pe/operand_d}
+add wave -noupdate -expand -group MXCore_Engine -group PE_Array -group PE_0 {/tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_pe_array/gen_pe[0]/i_pe/mxdotp_result}
+add wave -noupdate -expand -group MXCore_Engine -group PE_Array -group PE_0 {/tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_pe_array/gen_pe[0]/i_pe/tile_result}
 add wave -noupdate -color Cyan /tb_mxcore_hwpe/dut/i_mxcore/i_ctrl/busy_o
-add wave -noupdate -group OBuffGlobal /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_global_output_buffer/mxdotp_result_valid_i
-add wave -noupdate -group OBuffGlobal /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_global_output_buffer/mxdotp_result_ready_o
-add wave -noupdate -group OBuffGlobal /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_global_output_buffer/mxdotp_result_i
-add wave -noupdate -group OBuffGlobal /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_global_output_buffer/obuff_result_valid_o
-add wave -noupdate -group OBuffGlobal /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_global_output_buffer/obuff_result_ready_i
-add wave -noupdate -group OBuffGlobal /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_global_output_buffer/obuff_result_o
-add wave -noupdate -group OBuffGlobal /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_global_output_buffer/status_q
-add wave -noupdate -group OBuffGlobal -color Cyan /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_global_output_buffer/read_enable
-add wave -noupdate -group OBuffGlobal -color Cyan -radix unsigned -radixshowbase 0 /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_global_output_buffer/read_addr_q
-add wave -noupdate -group OBuffGlobal /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_global_output_buffer/read_data
-add wave -noupdate -group OBuffGlobal -color Yellow /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_global_output_buffer/write_enable
-add wave -noupdate -group OBuffGlobal -color Yellow -radix unsigned -radixshowbase 0 /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_global_output_buffer/write_addr_q
-add wave -noupdate -group OBuffGlobal -radix binary /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_global_output_buffer/tile_status_q
-add wave -noupdate -group OBuffGlobal /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_global_output_buffer/empty_o
-add wave -noupdate -group Tile_Read -color Cyan /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_global_output_buffer/last_iter_i
-add wave -noupdate -group Tile_Read /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_global_output_buffer/tile_result_valid_o
-add wave -noupdate -group Tile_Read /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_global_output_buffer/tile_result_ready_i
-add wave -noupdate -group Tile_Read /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_global_output_buffer/tile_result_o
-add wave -noupdate -group Tile_Read -color Cyan /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_global_output_buffer/tile_read_enable
-add wave -noupdate -group Tile_Read -color Cyan -radix unsigned -radixshowbase 0 /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_global_output_buffer/tile_addr_q
+add wave -noupdate -group Output_Buffer_Ctrl /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_output_buffer_ctrl/mxdotp_result_valid_i
+add wave -noupdate -group Output_Buffer_Ctrl /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_output_buffer_ctrl/mxdotp_result_ready_o
+add wave -noupdate -group Output_Buffer_Ctrl /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_output_buffer_ctrl/obuff_result_valid_o
+add wave -noupdate -group Output_Buffer_Ctrl /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_output_buffer_ctrl/obuff_result_ready_i
+add wave -noupdate -group Output_Buffer_Ctrl /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_output_buffer_ctrl/status_q
+add wave -noupdate -group Output_Buffer_Ctrl -color Cyan -radix unsigned -radixshowbase 0 /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_output_buffer_ctrl/read_addr_q
+add wave -noupdate -group Output_Buffer_Ctrl -color Yellow /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_output_buffer_ctrl/write_enable
+add wave -noupdate -group Output_Buffer_Ctrl -color Yellow -radix unsigned -radixshowbase 0 /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_output_buffer_ctrl/write_addr_q
+add wave -noupdate -group Output_Buffer_Ctrl -radix binary /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_output_buffer_ctrl/tile_status_q
+add wave -noupdate -group Output_Buffer_Ctrl /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_output_buffer_ctrl/empty_o
+add wave -noupdate -group Tile_Read -color Cyan /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_output_buffer_ctrl/last_iter_i
+add wave -noupdate -group Tile_Read /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_output_buffer_ctrl/tile_result_valid_o
+add wave -noupdate -group Tile_Read /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_output_buffer_ctrl/tile_result_ready_i
+add wave -noupdate -group Tile_Read /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/tile_result
+add wave -noupdate -group Tile_Read -color Cyan -radix unsigned -radixshowbase 0 /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_output_buffer_ctrl/tile_addr_q
 add wave -noupdate -group ReuseCounters /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_reuse_counters/clear_i
 add wave -noupdate -group ReuseCounters -radix unsigned -radixshowbase 0 /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_reuse_counters/ireuse_i
 add wave -noupdate -group ReuseCounters /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_reuse_counters/count_in_i
@@ -58,82 +54,26 @@ add wave -noupdate -group Inputs -group Inputs_From_Streamer -group mxcore_vecto
 add wave -noupdate -group Inputs -group Inputs_From_Streamer -group mxcore_vector_a /tb_mxcore_hwpe/dut/i_mxcore/i_vector_a_buffer/data_i/ready
 add wave -noupdate -group Inputs -group Inputs_From_Streamer -group mxcore_vector_a /tb_mxcore_hwpe/dut/i_mxcore/i_vector_a_buffer/data_i/data
 add wave -noupdate -group Inputs -group Inputs_From_Streamer -group mxcore_vector_a /tb_mxcore_hwpe/dut/i_mxcore/i_vector_a_buffer/data_i/strb
-add wave -noupdate -group Inputs -group Inputs_From_Streamer -group mxcore_vectors_b /tb_mxcore_hwpe/dut/i_mxcore/i_vectors_b_buffer/data_i/valid
-add wave -noupdate -group Inputs -group Inputs_From_Streamer -group mxcore_vectors_b /tb_mxcore_hwpe/dut/i_mxcore/i_vectors_b_buffer/data_i/ready
-add wave -noupdate -group Inputs -group Inputs_From_Streamer -group mxcore_vectors_b /tb_mxcore_hwpe/dut/i_mxcore/i_vectors_b_buffer/data_i/data
-add wave -noupdate -group Inputs -group Inputs_From_Streamer -group mxcore_vectors_b /tb_mxcore_hwpe/dut/i_mxcore/i_vectors_b_buffer/data_i/strb
+add wave -noupdate -group Inputs -group Inputs_From_Streamer -group mxcore_vectors_b /tb_mxcore_hwpe/dut/i_mxcore/i_engine/vectors_b_i/valid
+add wave -noupdate -group Inputs -group Inputs_From_Streamer -group mxcore_vectors_b /tb_mxcore_hwpe/dut/i_mxcore/i_engine/vectors_b_i/ready
+add wave -noupdate -group Inputs -group Inputs_From_Streamer -group mxcore_vectors_b /tb_mxcore_hwpe/dut/i_mxcore/i_engine/vectors_b_i/data
+add wave -noupdate -group Inputs -group Inputs_From_Streamer -group mxcore_vectors_b /tb_mxcore_hwpe/dut/i_mxcore/i_engine/vectors_b_i/strb
 add wave -noupdate -group Inputs -group Inputs_From_Streamer -group mxcore_scale_a /tb_mxcore_hwpe/dut/i_mxcore/i_scale_a_buffer/data_i/valid
 add wave -noupdate -group Inputs -group Inputs_From_Streamer -group mxcore_scale_a /tb_mxcore_hwpe/dut/i_mxcore/i_scale_a_buffer/data_i/ready
 add wave -noupdate -group Inputs -group Inputs_From_Streamer -group mxcore_scale_a /tb_mxcore_hwpe/dut/i_mxcore/i_scale_a_buffer/data_i/data
 add wave -noupdate -group Inputs -group Inputs_From_Streamer -group mxcore_scale_a /tb_mxcore_hwpe/dut/i_mxcore/i_scale_a_buffer/data_i/strb
-add wave -noupdate -group Inputs -group Inputs_From_Streamer -group mxcore_scale_b /tb_mxcore_hwpe/dut/i_mxcore/i_scale_b_buffer/data_i/valid
-add wave -noupdate -group Inputs -group Inputs_From_Streamer -group mxcore_scale_b /tb_mxcore_hwpe/dut/i_mxcore/i_scale_b_buffer/data_i/ready
-add wave -noupdate -group Inputs -group Inputs_From_Streamer -group mxcore_scale_b /tb_mxcore_hwpe/dut/i_mxcore/i_scale_b_buffer/data_i/data
-add wave -noupdate -group Inputs -group Inputs_From_Streamer -group mxcore_scale_b /tb_mxcore_hwpe/dut/i_mxcore/i_scale_b_buffer/data_i/strb
-add wave -noupdate -group Inputs -group Inputs_Prefence -group vectors_b_prefence -expand -group vectors_b_prefence.source /tb_mxcore_hwpe/dut/i_mxcore/i_vectors_b_buffer/data_o/valid
-add wave -noupdate -group Inputs -group Inputs_Prefence -group vectors_b_prefence -expand -group vectors_b_prefence.source /tb_mxcore_hwpe/dut/i_mxcore/i_vectors_b_buffer/data_o/ready
-add wave -noupdate -group Inputs -group Inputs_Prefence -group vectors_b_prefence -expand -group vectors_b_prefence.source /tb_mxcore_hwpe/dut/i_mxcore/i_vectors_b_buffer/data_o/data
-add wave -noupdate -group Inputs -group Inputs_Prefence -group vectors_b_prefence -expand -group vectors_b_prefence.source /tb_mxcore_hwpe/dut/i_mxcore/i_vectors_b_buffer/data_o/strb
-add wave -noupdate -group Inputs -group Inputs_Prefence -group vectors_b_prefence -group vectors_b_prefence.sink /tb_mxcore_hwpe/dut/i_mxcore/i_input_fence/vectors_b_i/valid
-add wave -noupdate -group Inputs -group Inputs_Prefence -group vectors_b_prefence -group vectors_b_prefence.sink /tb_mxcore_hwpe/dut/i_mxcore/i_input_fence/vectors_b_i/ready
-add wave -noupdate -group Inputs -group Inputs_Prefence -group vectors_b_prefence -group vectors_b_prefence.sink /tb_mxcore_hwpe/dut/i_mxcore/i_input_fence/vectors_b_i/data
-add wave -noupdate -group Inputs -group Inputs_Prefence -group vectors_b_prefence -group vectors_b_prefence.sink /tb_mxcore_hwpe/dut/i_mxcore/i_input_fence/vectors_b_i/strb
-add wave -noupdate -group Inputs -group Inputs_Prefence -group scale_a_prefence -group scale_a_prefence.source /tb_mxcore_hwpe/dut/i_mxcore/i_scale_a_buffer/data_o/valid
-add wave -noupdate -group Inputs -group Inputs_Prefence -group scale_a_prefence -group scale_a_prefence.source /tb_mxcore_hwpe/dut/i_mxcore/i_scale_a_buffer/data_o/ready
-add wave -noupdate -group Inputs -group Inputs_Prefence -group scale_a_prefence -group scale_a_prefence.source /tb_mxcore_hwpe/dut/i_mxcore/i_scale_a_buffer/data_o/data
-add wave -noupdate -group Inputs -group Inputs_Prefence -group scale_a_prefence -group scale_a_prefence.source /tb_mxcore_hwpe/dut/i_mxcore/i_scale_a_buffer/data_o/strb
-add wave -noupdate -group Inputs -group Inputs_Prefence -group scale_a_prefence -group scale_a_prefence.sink /tb_mxcore_hwpe/dut/i_mxcore/i_input_fence/scale_a_i/valid
-add wave -noupdate -group Inputs -group Inputs_Prefence -group scale_a_prefence -group scale_a_prefence.sink /tb_mxcore_hwpe/dut/i_mxcore/i_input_fence/scale_a_i/ready
-add wave -noupdate -group Inputs -group Inputs_Prefence -group scale_a_prefence -group scale_a_prefence.sink /tb_mxcore_hwpe/dut/i_mxcore/i_input_fence/scale_a_i/data
-add wave -noupdate -group Inputs -group Inputs_Prefence -group scale_a_prefence -group scale_a_prefence.sink /tb_mxcore_hwpe/dut/i_mxcore/i_input_fence/scale_a_i/strb
-add wave -noupdate -group Inputs -group Inputs_Prefence -group scale_b_prefence -group scale_b_prefence.source /tb_mxcore_hwpe/dut/i_mxcore/i_scale_b_buffer/data_o/valid
-add wave -noupdate -group Inputs -group Inputs_Prefence -group scale_b_prefence -group scale_b_prefence.source /tb_mxcore_hwpe/dut/i_mxcore/i_scale_b_buffer/data_o/ready
-add wave -noupdate -group Inputs -group Inputs_Prefence -group scale_b_prefence -group scale_b_prefence.source /tb_mxcore_hwpe/dut/i_mxcore/i_scale_b_buffer/data_o/data
-add wave -noupdate -group Inputs -group Inputs_Prefence -group scale_b_prefence -group scale_b_prefence.source /tb_mxcore_hwpe/dut/i_mxcore/i_scale_b_buffer/data_o/strb
-add wave -noupdate -group Inputs -group Inputs_Prefence -group scale_b_prefence -group scale_b_prefence.sink /tb_mxcore_hwpe/dut/i_mxcore/i_input_fence/scale_b_i/valid
-add wave -noupdate -group Inputs -group Inputs_Prefence -group scale_b_prefence -group scale_b_prefence.sink /tb_mxcore_hwpe/dut/i_mxcore/i_input_fence/scale_b_i/ready
-add wave -noupdate -group Inputs -group Inputs_Prefence -group scale_b_prefence -group scale_b_prefence.sink /tb_mxcore_hwpe/dut/i_mxcore/i_input_fence/scale_b_i/data
-add wave -noupdate -group Inputs -group Inputs_Prefence -group scale_b_prefence -group scale_b_prefence.sink /tb_mxcore_hwpe/dut/i_mxcore/i_input_fence/scale_b_i/strb
-add wave -noupdate -group Inputs -group Inputs_Prefence -group vector_a_prefence -group vector_a_prefence.source /tb_mxcore_hwpe/dut/i_mxcore/i_vector_a_buffer/data_o/valid
-add wave -noupdate -group Inputs -group Inputs_Prefence -group vector_a_prefence -group vector_a_prefence.source /tb_mxcore_hwpe/dut/i_mxcore/i_vector_a_buffer/data_o/ready
-add wave -noupdate -group Inputs -group Inputs_Prefence -group vector_a_prefence -group vector_a_prefence.source /tb_mxcore_hwpe/dut/i_mxcore/i_vector_a_buffer/data_o/data
-add wave -noupdate -group Inputs -group Inputs_Prefence -group vector_a_prefence -group vector_a_prefence.source /tb_mxcore_hwpe/dut/i_mxcore/i_vector_a_buffer/data_o/strb
-add wave -noupdate -group Inputs -group Inputs_Prefence -group vector_a_prefence -group vector_a_prefence.sink /tb_mxcore_hwpe/dut/i_mxcore/i_input_fence/vector_a_i/valid
-add wave -noupdate -group Inputs -group Inputs_Prefence -group vector_a_prefence -group vector_a_prefence.sink /tb_mxcore_hwpe/dut/i_mxcore/i_input_fence/vector_a_i/ready
-add wave -noupdate -group Inputs -group Inputs_Prefence -group vector_a_prefence -group vector_a_prefence.sink /tb_mxcore_hwpe/dut/i_mxcore/i_input_fence/vector_a_i/data
-add wave -noupdate -group Inputs -group Inputs_Prefence -group vector_a_prefence -group vector_a_prefence.sink /tb_mxcore_hwpe/dut/i_mxcore/i_input_fence/vector_a_i/strb
-add wave -noupdate -group Inputs -group Inputs_Engine -group mxcore_engine_vector_a -group mxcore_engine_vector_a.sink /tb_mxcore_hwpe/dut/i_mxcore/i_engine/vector_a_i/valid
-add wave -noupdate -group Inputs -group Inputs_Engine -group mxcore_engine_vector_a -group mxcore_engine_vector_a.sink /tb_mxcore_hwpe/dut/i_mxcore/i_engine/vector_a_i/ready
-add wave -noupdate -group Inputs -group Inputs_Engine -group mxcore_engine_vector_a -group mxcore_engine_vector_a.sink /tb_mxcore_hwpe/dut/i_mxcore/i_engine/vector_a_i/data
-add wave -noupdate -group Inputs -group Inputs_Engine -group mxcore_engine_vector_a -group mxcore_engine_vector_a.sink /tb_mxcore_hwpe/dut/i_mxcore/i_engine/vector_a_i/strb
-add wave -noupdate -group Inputs -group Inputs_Engine -group mxcore_engine_vector_a -group mxcore_engine_vector_a.source /tb_mxcore_hwpe/dut/i_mxcore/i_input_fence/vector_a_o/valid
-add wave -noupdate -group Inputs -group Inputs_Engine -group mxcore_engine_vector_a -group mxcore_engine_vector_a.source /tb_mxcore_hwpe/dut/i_mxcore/i_input_fence/vector_a_o/ready
-add wave -noupdate -group Inputs -group Inputs_Engine -group mxcore_engine_vector_a -group mxcore_engine_vector_a.source /tb_mxcore_hwpe/dut/i_mxcore/i_input_fence/vector_a_o/data
-add wave -noupdate -group Inputs -group Inputs_Engine -group mxcore_engine_vector_a -group mxcore_engine_vector_a.source /tb_mxcore_hwpe/dut/i_mxcore/i_input_fence/vector_a_o/strb
-add wave -noupdate -group Inputs -group Inputs_Engine -group mxcore_engine_vectors_b -group mxcore_engine_vectors_b.source /tb_mxcore_hwpe/dut/i_mxcore/i_input_fence/vectors_b_o/valid
-add wave -noupdate -group Inputs -group Inputs_Engine -group mxcore_engine_vectors_b -group mxcore_engine_vectors_b.source /tb_mxcore_hwpe/dut/i_mxcore/i_input_fence/vectors_b_o/ready
-add wave -noupdate -group Inputs -group Inputs_Engine -group mxcore_engine_vectors_b -group mxcore_engine_vectors_b.source /tb_mxcore_hwpe/dut/i_mxcore/i_input_fence/vectors_b_o/data
-add wave -noupdate -group Inputs -group Inputs_Engine -group mxcore_engine_vectors_b -group mxcore_engine_vectors_b.source /tb_mxcore_hwpe/dut/i_mxcore/i_input_fence/vectors_b_o/strb
-add wave -noupdate -group Inputs -group Inputs_Engine -group mxcore_engine_vectors_b -group mxcore_engine_vectors_b.sink /tb_mxcore_hwpe/dut/i_mxcore/i_engine/vectors_b_i/valid
-add wave -noupdate -group Inputs -group Inputs_Engine -group mxcore_engine_vectors_b -group mxcore_engine_vectors_b.sink /tb_mxcore_hwpe/dut/i_mxcore/i_engine/vectors_b_i/ready
-add wave -noupdate -group Inputs -group Inputs_Engine -group mxcore_engine_vectors_b -group mxcore_engine_vectors_b.sink /tb_mxcore_hwpe/dut/i_mxcore/i_engine/vectors_b_i/data
-add wave -noupdate -group Inputs -group Inputs_Engine -group mxcore_engine_vectors_b -group mxcore_engine_vectors_b.sink /tb_mxcore_hwpe/dut/i_mxcore/i_engine/vectors_b_i/strb
-add wave -noupdate -group Inputs -group Inputs_Engine -group mxcore_engine_scale_a -group mxcore_engine_scale_a.source /tb_mxcore_hwpe/dut/i_mxcore/i_input_fence/scale_a_o/valid
-add wave -noupdate -group Inputs -group Inputs_Engine -group mxcore_engine_scale_a -group mxcore_engine_scale_a.source /tb_mxcore_hwpe/dut/i_mxcore/i_input_fence/scale_a_o/ready
-add wave -noupdate -group Inputs -group Inputs_Engine -group mxcore_engine_scale_a -group mxcore_engine_scale_a.source /tb_mxcore_hwpe/dut/i_mxcore/i_input_fence/scale_a_o/data
-add wave -noupdate -group Inputs -group Inputs_Engine -group mxcore_engine_scale_a -group mxcore_engine_scale_a.source /tb_mxcore_hwpe/dut/i_mxcore/i_input_fence/scale_a_o/strb
-add wave -noupdate -group Inputs -group Inputs_Engine -group mxcore_engine_scale_a -group mxcore_engine_scale_a.sink /tb_mxcore_hwpe/dut/i_mxcore/i_engine/scale_a_i/valid
-add wave -noupdate -group Inputs -group Inputs_Engine -group mxcore_engine_scale_a -group mxcore_engine_scale_a.sink /tb_mxcore_hwpe/dut/i_mxcore/i_engine/scale_a_i/ready
-add wave -noupdate -group Inputs -group Inputs_Engine -group mxcore_engine_scale_a -group mxcore_engine_scale_a.sink /tb_mxcore_hwpe/dut/i_mxcore/i_engine/scale_a_i/data
-add wave -noupdate -group Inputs -group Inputs_Engine -group mxcore_engine_scale_a -group mxcore_engine_scale_a.sink /tb_mxcore_hwpe/dut/i_mxcore/i_engine/scale_a_i/strb
-add wave -noupdate -group Inputs -group Inputs_Engine -group mxcore_engine_scale_b -group mxcore_engine_scale_b.source /tb_mxcore_hwpe/dut/i_mxcore/i_input_fence/scale_b_o/valid
-add wave -noupdate -group Inputs -group Inputs_Engine -group mxcore_engine_scale_b -group mxcore_engine_scale_b.source /tb_mxcore_hwpe/dut/i_mxcore/i_input_fence/scale_b_o/ready
-add wave -noupdate -group Inputs -group Inputs_Engine -group mxcore_engine_scale_b -group mxcore_engine_scale_b.source /tb_mxcore_hwpe/dut/i_mxcore/i_input_fence/scale_b_o/data
-add wave -noupdate -group Inputs -group Inputs_Engine -group mxcore_engine_scale_b -group mxcore_engine_scale_b.source /tb_mxcore_hwpe/dut/i_mxcore/i_input_fence/scale_b_o/strb
-add wave -noupdate -group Inputs -group Inputs_Engine -group mxcore_engine_scale_b -group mxcore_engine_scale_b.sink /tb_mxcore_hwpe/dut/i_mxcore/i_engine/scale_b_i/valid
-add wave -noupdate -group Inputs -group Inputs_Engine -group mxcore_engine_scale_b -group mxcore_engine_scale_b.sink /tb_mxcore_hwpe/dut/i_mxcore/i_engine/scale_b_i/ready
-add wave -noupdate -group Inputs -group Inputs_Engine -group mxcore_engine_scale_b -group mxcore_engine_scale_b.sink /tb_mxcore_hwpe/dut/i_mxcore/i_engine/scale_b_i/data
-add wave -noupdate -group Inputs -group Inputs_Engine -group mxcore_engine_scale_b -group mxcore_engine_scale_b.sink /tb_mxcore_hwpe/dut/i_mxcore/i_engine/scale_b_i/strb
+add wave -noupdate -group Inputs -group Inputs_From_Streamer -group mxcore_scale_b /tb_mxcore_hwpe/dut/i_mxcore/i_engine/scale_b_i/valid
+add wave -noupdate -group Inputs -group Inputs_From_Streamer -group mxcore_scale_b /tb_mxcore_hwpe/dut/i_mxcore/i_engine/scale_b_i/ready
+add wave -noupdate -group Inputs -group Inputs_From_Streamer -group mxcore_scale_b /tb_mxcore_hwpe/dut/i_mxcore/i_engine/scale_b_i/data
+add wave -noupdate -group Inputs -group Inputs_From_Streamer -group mxcore_scale_b /tb_mxcore_hwpe/dut/i_mxcore/i_engine/scale_b_i/strb
+add wave -noupdate -group Inputs -group Inputs_Engine -group mxcore_engine_vector_a /tb_mxcore_hwpe/dut/i_mxcore/i_engine/vector_a_i/valid
+add wave -noupdate -group Inputs -group Inputs_Engine -group mxcore_engine_vector_a /tb_mxcore_hwpe/dut/i_mxcore/i_engine/vector_a_i/ready
+add wave -noupdate -group Inputs -group Inputs_Engine -group mxcore_engine_vector_a /tb_mxcore_hwpe/dut/i_mxcore/i_engine/vector_a_i/data
+add wave -noupdate -group Inputs -group Inputs_Engine -group mxcore_engine_vector_a /tb_mxcore_hwpe/dut/i_mxcore/i_engine/vector_a_i/strb
+add wave -noupdate -group Inputs -group Inputs_Engine -group mxcore_engine_scale_a /tb_mxcore_hwpe/dut/i_mxcore/i_engine/scale_a_i/valid
+add wave -noupdate -group Inputs -group Inputs_Engine -group mxcore_engine_scale_a /tb_mxcore_hwpe/dut/i_mxcore/i_engine/scale_a_i/ready
+add wave -noupdate -group Inputs -group Inputs_Engine -group mxcore_engine_scale_a /tb_mxcore_hwpe/dut/i_mxcore/i_engine/scale_a_i/data
+add wave -noupdate -group Inputs -group Inputs_Engine -group mxcore_engine_scale_a /tb_mxcore_hwpe/dut/i_mxcore/i_engine/scale_a_i/strb
 add wave -noupdate -group Result -expand -group Result_Engine /tb_mxcore_hwpe/dut/i_mxcore/i_engine/result_o/valid
 add wave -noupdate -group Result -expand -group Result_Engine /tb_mxcore_hwpe/dut/i_mxcore/i_engine/result_o/ready
 add wave -noupdate -group Result -expand -group Result_Engine /tb_mxcore_hwpe/dut/i_mxcore/i_engine/result_o/data
@@ -146,25 +86,30 @@ add wave -noupdate -group Result -group Result_Streamer /tb_mxcore_hwpe/dut/i_mx
 add wave -noupdate -group Result -group Result_Streamer /tb_mxcore_hwpe/dut/i_mxcore/mxcore_result/ready
 add wave -noupdate -group Result -group Result_Streamer /tb_mxcore_hwpe/dut/i_mxcore/mxcore_result/data
 add wave -noupdate -group Result -group Result_Streamer /tb_mxcore_hwpe/dut/i_mxcore/mxcore_result/strb
-add wave -noupdate -group Vectors_B_Buffer_Data -group Vectors_B_Buffer_Input_Stream /tb_mxcore_hwpe/dut/i_mxcore/i_vectors_b_buffer/data_i/valid
-add wave -noupdate -group Vectors_B_Buffer_Data -group Vectors_B_Buffer_Input_Stream /tb_mxcore_hwpe/dut/i_mxcore/i_vectors_b_buffer/data_i/ready
-add wave -noupdate -group Vectors_B_Buffer_Data -group Vectors_B_Buffer_Input_Stream /tb_mxcore_hwpe/dut/i_mxcore/i_vectors_b_buffer/data_i/data
-add wave -noupdate -group Vectors_B_Buffer_Data -group Vectors_B_Buffer_Input_Stream /tb_mxcore_hwpe/dut/i_mxcore/i_vectors_b_buffer/data_i/strb
-add wave -noupdate -group Vectors_B_Buffer_Data -group Vectors_B_Buffer_Output_Stream /tb_mxcore_hwpe/dut/i_mxcore/i_vectors_b_buffer/data_o/valid
-add wave -noupdate -group Vectors_B_Buffer_Data -group Vectors_B_Buffer_Output_Stream /tb_mxcore_hwpe/dut/i_mxcore/i_vectors_b_buffer/data_o/ready
-add wave -noupdate -group Vectors_B_Buffer_Data -group Vectors_B_Buffer_Output_Stream /tb_mxcore_hwpe/dut/i_mxcore/i_vectors_b_buffer/data_o/data
-add wave -noupdate -group Vectors_B_Buffer_Data -group Vectors_B_Buffer_Output_Stream /tb_mxcore_hwpe/dut/i_mxcore/i_vectors_b_buffer/data_o/strb
-add wave -noupdate -group Vectors_B_Buffer_Control /tb_mxcore_hwpe/dut/i_mxcore/i_vectors_b_buffer/reuse_count_q
-add wave -noupdate -group SCALE_B_FIFO_Buffer_Counters /tb_mxcore_hwpe/dut/i_mxcore/i_scale_b_buffer/ReuseFactor
-add wave -noupdate -group SCALE_B_FIFO_Buffer_Counters /tb_mxcore_hwpe/dut/i_mxcore/i_scale_b_buffer/ScaleFactor
-add wave -noupdate -group SCALE_B_FIFO_Buffer_Counters /tb_mxcore_hwpe/dut/i_mxcore/i_scale_b_buffer/SCALE_COUNT
-add wave -noupdate -group SCALE_B_FIFO_Buffer_Counters {/tb_mxcore_hwpe/dut/i_mxcore/i_scale_b_buffer/push_fifo_data[0]}
-add wave -noupdate -group SCALE_B_FIFO_Buffer_Counters {/tb_mxcore_hwpe/dut/i_mxcore/i_scale_b_buffer/pop_fifo_data[0]}
-add wave -noupdate -group SCALE_B_FIFO_Buffer_Counters {/tb_mxcore_hwpe/dut/i_mxcore/i_scale_b_buffer/pop_fifo_ready[0]}
-add wave -noupdate -group SCALE_B_FIFO_Buffer_Counters -color Cyan -radix unsigned -radixshowbase 0 /tb_mxcore_hwpe/dut/i_mxcore/i_scale_b_buffer/pop_count_q
-add wave -noupdate -group SCALE_B_FIFO_Buffer_Counters -color Cyan -radix unsigned -radixshowbase 0 /tb_mxcore_hwpe/dut/i_mxcore/i_scale_b_buffer/reuse_count_q
-add wave -noupdate -group SCALE_B_FIFO_Buffer_Counters -color Cyan -radix unsigned -radixshowbase 0 /tb_mxcore_hwpe/dut/i_mxcore/i_scale_b_buffer/scale_reuse_count_q
-add wave -noupdate -group B_FIFO_Buffer_Counters -color Cyan -radix unsigned -radixshowbase 0 /tb_mxcore_hwpe/dut/i_mxcore/i_vectors_b_buffer/reuse_count_q
+add wave -noupdate -group Vector_B_Buffer_Ctrl /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_vector_b_buffer_ctrl/data_valid_i
+add wave -noupdate -group Vector_B_Buffer_Ctrl /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_vector_b_buffer_ctrl/data_ready_o
+add wave -noupdate -group Vector_B_Buffer_Ctrl /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_vector_b_buffer_ctrl/data_valid_o
+add wave -noupdate -group Vector_B_Buffer_Ctrl /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_vector_b_buffer_ctrl/data_ready_i
+add wave -noupdate -group Vector_B_Buffer_Ctrl /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_vector_b_buffer_ctrl/write_enable_o
+add wave -noupdate -group Vector_B_Buffer_Ctrl /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_vector_b_buffer_ctrl/write_addr_o
+add wave -noupdate -group Vector_B_Buffer_Ctrl /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_vector_b_buffer_ctrl/read_addr_o
+add wave -noupdate -group Vector_B_Buffer_Ctrl /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_vector_b_buffer_ctrl/row_full_q
+add wave -noupdate -group Vector_B_Buffer_Ctrl -color Cyan -radix unsigned -radixshowbase 0 /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_vector_b_buffer_ctrl/push_count_q
+add wave -noupdate -group Vector_B_Buffer_Ctrl -color Cyan -radix unsigned -radixshowbase 0 /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_vector_b_buffer_ctrl/pop_count_q
+add wave -noupdate -group Vector_B_Buffer_Ctrl -color Cyan -radix unsigned -radixshowbase 0 /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_vector_b_buffer_ctrl/reuse_count_q
+add wave -noupdate -group Vector_B_Buffer_Ctrl -color Cyan -radix unsigned -radixshowbase 0 /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_vector_b_buffer_ctrl/scale_reuse_count_q
+add wave -noupdate -group Scale_B_Buffer_Ctrl /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_scale_b_buffer_ctrl/data_valid_i
+add wave -noupdate -group Scale_B_Buffer_Ctrl /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_scale_b_buffer_ctrl/data_ready_o
+add wave -noupdate -group Scale_B_Buffer_Ctrl /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_scale_b_buffer_ctrl/data_valid_o
+add wave -noupdate -group Scale_B_Buffer_Ctrl /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_scale_b_buffer_ctrl/data_ready_i
+add wave -noupdate -group Scale_B_Buffer_Ctrl /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_scale_b_buffer_ctrl/write_enable_o
+add wave -noupdate -group Scale_B_Buffer_Ctrl /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_scale_b_buffer_ctrl/write_addr_o
+add wave -noupdate -group Scale_B_Buffer_Ctrl /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_scale_b_buffer_ctrl/read_addr_o
+add wave -noupdate -group Scale_B_Buffer_Ctrl /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_scale_b_buffer_ctrl/row_full_q
+add wave -noupdate -group Scale_B_Buffer_Ctrl -color Cyan -radix unsigned -radixshowbase 0 /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_scale_b_buffer_ctrl/push_count_q
+add wave -noupdate -group Scale_B_Buffer_Ctrl -color Cyan -radix unsigned -radixshowbase 0 /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_scale_b_buffer_ctrl/pop_count_q
+add wave -noupdate -group Scale_B_Buffer_Ctrl -color Cyan -radix unsigned -radixshowbase 0 /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_scale_b_buffer_ctrl/reuse_count_q
+add wave -noupdate -group Scale_B_Buffer_Ctrl -color Cyan -radix unsigned -radixshowbase 0 /tb_mxcore_hwpe/dut/i_mxcore/i_engine/i_mxcore_engine/i_scale_b_buffer_ctrl/scale_reuse_count_q
 add wave -noupdate -group Scale_A_Buffer /tb_mxcore_hwpe/dut/i_mxcore/i_scale_a_buffer/ReuseFactor
 add wave -noupdate -group Scale_A_Buffer /tb_mxcore_hwpe/dut/i_mxcore/i_scale_a_buffer/ScaleFactor
 add wave -noupdate -group Scale_A_Buffer /tb_mxcore_hwpe/dut/i_mxcore/i_scale_a_buffer/FIFO_FACTOR
