@@ -87,6 +87,9 @@ ifeq ($(multictx), 1)
 	jobs_file ?= ${ROOT_DIR}/testvectors/multicontext/jobs_${src_fmt}_VS${vector_size}_MX${num_compute_units}_O${num_out_buffers}_M${mdim}_K${kdim}_N${ndim}_BS${block_size}_${output_fmt}_P${preload}_J${num_jobs}.txt
 	vlog_defs += -DMULTICTX -DJOBS_FILE="\"$(jobs_file)\"" -DL1_KIB=$(l1_kib) -DDMA_BW=$(dma_bw)
 endif
+ifeq ($(dataflow_trace), 1)
+	vlog_defs += -DDATAFLOW_TRACE
+endif
 
 ifeq ($(target), tb_mxcore_hwpe)
 	BENDER_TARGETS += -t mxcore_hwpe -t mxcore_hwpe_test

@@ -431,4 +431,17 @@ module mxcore_hwpe_streamer
     .tcdm_initiator ( tcdm_result           )
   );
 
+`ifdef DATAFLOW_TRACE
+  always_ff @(posedge clk_i) begin
+    if (rst_ni && vector_a_o.valid && vector_a_o.ready)         $display("DF %0.3f LOAD A", $realtime/1ns); // Debug Display
+    if (rst_ni && vectors_b_o.valid && vectors_b_o.ready)       $display("DF %0.3f LOAD B", $realtime/1ns); // Debug Display
+    if (rst_ni && scale_a_o.valid && scale_a_o.ready)           $display("DF %0.3f LOAD SA", $realtime/1ns); // Debug Display
+    if (rst_ni && scale_b_o.valid && scale_b_o.ready)           $display("DF %0.3f LOAD SB", $realtime/1ns); // Debug Display
+    if (rst_ni && preload_bias_o.valid && preload_bias_o.ready) $display("DF %0.3f LOAD BIAS", $realtime/1ns); // Debug Display
+    if (rst_ni && result_i.valid && result_i.ready)             $display("DF %0.3f DRAIN C", $realtime/1ns); // Debug Display
+    if (rst_ni && result_scale_i.valid && result_scale_i.ready) $display("DF %0.3f DRAIN SC", $realtime/1ns); // Debug Display
+    if (rst_ni && tcdm_result.req && tcdm_result.gnt)           $display("DF %0.3f TCDM_WRITE", $realtime/1ns); // Debug Display
+  end
+`endif
+
 endmodule : mxcore_hwpe_streamer

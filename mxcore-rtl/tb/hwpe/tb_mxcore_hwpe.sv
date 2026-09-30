@@ -245,6 +245,10 @@ module tb_mxcore_hwpe;
 
   logic mem_loaded = 1'b0;
 
+`ifdef DATAFLOW_TRACE
+  initial $display("DF CLK %0.0f %0d %0d %0d %0d %0d %0d %0d %0d %s", CLK_PERIOD/1ps, VECTOR_SIZE, NPE, REUSE, NumJobs, MultiCtx, Preload, QuantizeMXFP8, QuantizeBF16, `SRC_FMT); // Debug Display
+`endif
+
 `ifdef MULTICTX
   typedef struct {
     int unsigned  half, m, k, n, preload, quantize_mxfp8, quantize_bf16;
@@ -291,11 +295,17 @@ module tb_mxcore_hwpe;
     $readmemh(mc_jobs[job].memory_file, mc_image);
     first = c_region ? (mc_jobs[job].c_ptr - mc_jobs[job].a_ptr) / 4 : 0;
     last  = c_region ? (first + (mc_jobs[job].preload ? mc_jobs[job].m * mc_jobs[job].n : 0)) : first + (mc_jobs[job].c_ptr - mc_jobs[job].a_ptr) / 4;
+`ifdef DATAFLOW_TRACE
+    if (paced && (last > first)) $display("DF %0.3f DMA_START %0d %s", $realtime/1ns, job, c_region ? "C" : "IN"); // Debug Display
+`endif
     for (int unsigned w = first; w < last; w++) begin
       tb_mxcore_hwpe.i_data_memory.memory[mc_jobs[job].a_ptr/4 + w] = mc_image[w];
       if (paced && (((w - first + 1) % (DmaBytesPerCycle/4)) == 0))
         @(posedge clk);
     end
+`ifdef DATAFLOW_TRACE
+    if (paced && (last > first)) $display("DF %0.3f DMA_END %0d %s", $realtime/1ns, job, c_region ? "C" : "IN"); // Debug Display
+`endif
   endtask
 
   initial begin

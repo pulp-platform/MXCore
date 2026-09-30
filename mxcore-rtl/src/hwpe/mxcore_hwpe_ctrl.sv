@@ -450,6 +450,18 @@ module mxcore_hwpe_ctrl
   `FF(ctrl_output_q,      ctrl_output_d,      '0)
   `FF(pending_evt_q,      pending_evt_d,      '0)
 
+`ifdef DATAFLOW_TRACE
+  always_ff @(posedge clk_i) begin
+    if (rst_ni && periph.req && periph.gnt) $display("DF %0.3f CFG %s %0h %0h", $realtime/1ns, periph.wen ? "RD" : "WR", periph.add, periph.data); // Debug Display
+    if (rst_ni && (state_d != state_q)) $display("DF %0.3f STATE %s", $realtime/1ns, state_d.name()); // Debug Display
+    if (rst_ni && start_job) $display("DF %0.3f JOB_START %0d %0d %0d %0d %0d %0d %0d", $realtime/1ns, M, reg_file.hwpe_params[MXCoreRegGEMMSize][21:10], N, ctrl_engine_o.preload, job_output.quantize_mxfp8, job_output.quantize_bf16, TOT_TILES); // Debug Display
+    if (rst_ni && flags_engine_i.tile_end) $display("DF %0.3f TILE_END %0d", $realtime/1ns, tile_count_q); // Debug Display
+    if (rst_ni && slave_ctrl.done) $display("DF %0.3f COMPUTE_DONE", $realtime/1ns); // Debug Display
+    if (rst_ni && job_done) $display("DF %0.3f JOB_DONE", $realtime/1ns); // Debug Display
+    if (rst_ni && (|evt_o)) $display("DF %0.3f EVT %b", $realtime/1ns, evt_o); // Debug Display
+  end
+`endif
+
   assign evt_o    = compute_evt | job_done_evt;
   assign busy_o   = (state_q != MXCoreIdle);
   assign clear_o  = slave_clear || stream_clear;

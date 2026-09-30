@@ -188,4 +188,10 @@ module mxcore_engine
   assign tile_end_o   = tile_end;
   assign busy_o       = mxdotp_busy || !obuff_empty;
 
+`ifdef DATAFLOW_TRACE
+  always_ff @(posedge clk_i) begin
+    if (rst_ni && (&in_valid_i) && !in_fire) $display("DF %0.3f STALL %s", $realtime/1ns, in_accept ? "PE" : "GOB"); // Debug Display
+  end
+`endif
+
 endmodule: mxcore_engine

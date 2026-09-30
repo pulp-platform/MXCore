@@ -44,6 +44,12 @@ module mxcore_reuse_counters
   `FFARNC(in_count_q,  in_count_d,  clear_i, '0)
   `FFARNC(out_count_q, out_count_d, clear_i, '0)
 
+`ifdef DATAFLOW_TRACE
+  always_ff @(posedge clk_i) begin
+    if (rst_ni && count_in_i) $display("DF %0.3f COMPUTE %0d %0d", $realtime/1ns, in_count_q, ireuse_i); // Debug Display
+  end
+`endif
+
   // First iteration: No Partial Results
   assign first_iter_o = (in_count_q < Reuse);
   // Last iteration: Final Tile Results

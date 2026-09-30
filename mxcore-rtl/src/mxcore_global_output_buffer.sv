@@ -140,6 +140,14 @@ module mxcore_global_output_buffer
   `FFARNC(preload_count_q, preload_count_d, clear_i, '0)
   `FFARNC(final_count_q,   final_count_d,   clear_i, '0)
 
+`ifdef DATAFLOW_TRACE
+  always_ff @(posedge clk_i) begin
+    if (rst_ni && bias_write_enable) $display("DF %0.3f PRELOAD %0d", $realtime/1ns, bias_addr_q); // Debug Display
+    if (rst_ni && write_enable) $display("DF %0.3f GOB_WRITE %0d %0d", $realtime/1ns, write_addr_q, last_iter_i); // Debug Display
+    if (rst_ni && tile_read_enable) $display("DF %0.3f TILE_READ %0d", $realtime/1ns, tile_addr_q); // Debug Display
+  end
+`endif
+
   generate
     for (genvar i = 0; i < Reuse; i++) begin : output_buffer_array
       mxcore_register_file_1r_1w_1row #(
