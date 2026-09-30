@@ -59,10 +59,6 @@ module mxcore_hwpe_ctrl
     .counter_pending  ( counter_pending )
   );
 
-  assign evt_o      = slave_flags.evt;
-  assign busy_o     = slave_flags.is_working;
-  assign clear_o    = slave_clear || stream_clear;
-
   // Operand Matrix Size Parameters
   logic [9:0]  M, N;
   assign M = reg_file.hwpe_params[MXCoreRegGEMMSize][9:0];
@@ -107,6 +103,8 @@ module mxcore_hwpe_ctrl
   end
 
   engine_state_t  state_d, state_q;
+  logic           preload_wait_d, preload_wait_q;
+  ctrl_output_t   job_output, ctrl_output_d, ctrl_output_q;
 
   always_comb begin
     // Engine Control Signals - Output to Engine
@@ -120,14 +118,14 @@ module mxcore_hwpe_ctrl
     ctrl_engine_o.mask                    = reg_file.hwpe_params[MXCoreRegCtrlEngine][18];
     ctrl_engine_o.aux                     = reg_file.hwpe_params[MXCoreRegCtrlEngine][19];
     ctrl_engine_o.flush                   = reg_file.hwpe_params[MXCoreRegCtrlEngine][20];
-    ctrl_engine_o.quantize_bf16           = reg_file.hwpe_params[MXCoreRegCtrlEngine][21];
-    ctrl_engine_o.quantize_mxfp8          = reg_file.hwpe_params[MXCoreRegCtrlEngine][22] && !reg_file.hwpe_params[MXCoreRegCtrlEngine][21];
-    ctrl_engine_o.block_poison_enable     = reg_file.hwpe_params[MXCoreRegCtrlEngine][23];
+    ctrl_engine_o.quantize_bf16           = ctrl_output_q.quantize_bf16;
+    ctrl_engine_o.quantize_mxfp8          = ctrl_output_q.quantize_mxfp8;
+    ctrl_engine_o.block_poison_enable     = ctrl_output_q.block_poison_enable;
     ctrl_engine_o.preload                 = reg_file.hwpe_params[MXCoreRegCtrlEngine][24];
     ctrl_engine_o.iter_count              = ITER_COUNT[15:0];
     ctrl_engine_o.sbmat_lt_bw             = SBMAT_LT_BW;
-    ctrl_engine_o.compute_en              = !ctrl_engine_o.preload || (state_q == Compute);
-    ctrl_engine_o.result_scale_tot_pushes = TOT_TILES * Reuse;
+    ctrl_engine_o.compute_en              = !ctrl_engine_o.preload || !preload_wait_q;
+    ctrl_engine_o.result_scale_tot_pushes = ctrl_output_q.result_scale_tot_pushes;
   end
 
   logic [31:0]  vector_a_addr, vectors_b_addr, scale_a_addr, scale_b_addr, preload_bias_addr, result_addr, result_scale_addr;
@@ -223,59 +221,119 @@ module mxcore_hwpe_ctrl
     RESULT_SCALE_TOT_LEN  = (RESULT_SCALE_MAT_SIZE < MXCoreTCDMDataWidth) ? 1 : (RESULT_SCALE_MAT_SIZE / MXCoreTCDMDataWidth);
   end
 
+  always_comb begin
+    job_output.quantize_bf16            = reg_file.hwpe_params[MXCoreRegCtrlEngine][21];
+    job_output.quantize_mxfp8           = reg_file.hwpe_params[MXCoreRegCtrlEngine][22] && !reg_file.hwpe_params[MXCoreRegCtrlEngine][21];
+    job_output.block_poison_enable      = reg_file.hwpe_params[MXCoreRegCtrlEngine][23];
+    job_output.result_scale_tot_pushes  = TOT_TILES * Reuse;
+    job_output.result_addr              = result_addr;
+    job_output.result_scale_addr        = result_scale_addr;
+    job_output.result_tot_len           = RESULT_TOT_LEN;
+    job_output.result_scale_tot_len     = RESULT_SCALE_TOT_LEN;
+  end
+
   logic [31:0]  tile_count_d, tile_count_q;
+  logic         last_tile, compute_done, next_context, output_compatible, sources_ready;
+  logic         start_job, latch_output, output_done, job_done;
+  logic         arm_output_q;
+  logic         compute_pending_d, compute_pending_q;
+  logic         output_armed_d, output_armed_q;
+  logic         data_drained_d, data_drained_q;
+  logic         scale_drained_d, scale_drained_q;
+  logic         slave_done_q;
+
+  assign last_tile          = (tile_count_q == TOT_TILES - 1);
+  assign compute_done       = flags_engine_i.tile_end && last_tile;
+  assign next_context       = (counter_pending > 1);
+  assign output_compatible  = (job_output.quantize_bf16 == ctrl_output_q.quantize_bf16) && (job_output.quantize_mxfp8 == ctrl_output_q.quantize_mxfp8) && (job_output.block_poison_enable == ctrl_output_q.block_poison_enable);
+  assign sources_ready      = flags_streamer_i.vector_a_source_flags.ready_start && flags_streamer_i.vectors_b_source_flags.ready_start && flags_streamer_i.scale_a_source_flags.ready_start && flags_streamer_i.scale_b_source_flags.ready_start && flags_streamer_i.preload_bias_source_flags.ready_start;
+  assign output_done        = (data_drained_q || flags_streamer_i.result_sink_flags.done) && (!ctrl_output_q.quantize_mxfp8 || scale_drained_q || flags_streamer_i.result_scale_sink_flags.done) && flags_fifo_i.empty;
 
   always_comb begin
     // Default Assignments
     state_d                                             = state_q;
     tile_count_d                                        = tile_count_q;
-    ctrl_streamer_o.vector_a_source_ctrl.req_start      = 1'b0;
-    ctrl_streamer_o.vectors_b_source_ctrl.req_start     = 1'b0;
-    ctrl_streamer_o.scale_a_source_ctrl.req_start       = 1'b0;
-    ctrl_streamer_o.scale_b_source_ctrl.req_start       = 1'b0;
-    ctrl_streamer_o.preload_bias_source_ctrl.req_start  = 1'b0;
-    ctrl_streamer_o.result_sink_ctrl.req_start          = 1'b0;
-    ctrl_streamer_o.result_scale_sink_ctrl.req_start    = 1'b0;
+    preload_wait_d                                      = preload_wait_q;
+    compute_pending_d                                   = compute_pending_q;
+    output_armed_d                                      = output_armed_q;
+    data_drained_d                                      = data_drained_q || flags_streamer_i.result_sink_flags.done;
+    scale_drained_d                                     = scale_drained_q || flags_streamer_i.result_scale_sink_flags.done;
+    ctrl_output_d                                       = ctrl_output_q;
+    start_job                                           = 1'b0;
+    latch_output                                        = 1'b0;
+    job_done                                            = 1'b0;
     slave_ctrl                                          = '0;
-    stream_clear                                        = 0;
+    stream_clear                                        = 1'b0;
+
+    if (preload_wait_q && flags_engine_i.preload_ready) begin
+      preload_wait_d = 1'b0;
+    end
+    if (flags_engine_i.tile_end) begin
+      tile_count_d   = last_tile ? '0 : tile_count_q + 1;
+      preload_wait_d = ctrl_engine_o.preload && !last_tile;
+    end
 
     case (state_q)
       MXCoreIdle: begin
-        if (slave_flags.start) begin
-          state_d                                             = ctrl_engine_o.preload ? Preload : Done;
-          ctrl_streamer_o.vector_a_source_ctrl.req_start      = 1'b1;
-          ctrl_streamer_o.vectors_b_source_ctrl.req_start     = 1'b1;
-          ctrl_streamer_o.scale_a_source_ctrl.req_start       = 1'b1;
-          ctrl_streamer_o.scale_b_source_ctrl.req_start       = 1'b1;
-          ctrl_streamer_o.preload_bias_source_ctrl.req_start  = ctrl_engine_o.preload;
-          ctrl_streamer_o.result_sink_ctrl.req_start          = 1'b1;
-          ctrl_streamer_o.result_scale_sink_ctrl.req_start    = ctrl_engine_o.quantize_mxfp8;
+        if ((counter_pending > 0) && sources_ready) begin
+          start_job     = 1'b1;
+          latch_output  = 1'b1;
+          state_d       = ComputeOnly;
         end
       end
-      Preload: begin
-        if (flags_engine_i.preload_ready) begin
-          state_d = Compute;
-        end
-      end
-      Compute: begin
-        if (flags_engine_i.tile_end) begin
-          if (tile_count_q == TOT_TILES - 1) begin
-            state_d = Done;
-          end else begin
-            state_d       = Preload;
-            tile_count_d  = tile_count_q + 1;
-          end
-        end
-      end
-      Done: begin
-        if (~flags_engine_i.busy && flags_streamer_i.vector_a_source_flags.ready_start && flags_streamer_i.vectors_b_source_flags.ready_start && flags_streamer_i.scale_a_source_flags.ready_start && flags_streamer_i.scale_b_source_flags.ready_start && flags_streamer_i.preload_bias_source_flags.ready_start && flags_streamer_i.result_sink_flags.ready_start && flags_streamer_i.result_scale_sink_flags.ready_start && flags_fifo_i.empty) begin
-          state_d         = MXCoreIdle;
-          tile_count_d    = '0;
+      ComputeOnly: begin
+        if (compute_done) begin
           slave_ctrl.done = 1'b1;
-          stream_clear    = 1'b1;
+          state_d         = Output;
         end
       end
+      ComputeAndOutput: begin
+        if (output_done) begin
+          job_done        = 1'b1;
+          latch_output    = 1'b1;
+          output_armed_d  = 1'b1;
+        end
+        if ((compute_done || compute_pending_q) && output_armed_q) begin
+          slave_ctrl.done   = 1'b1;
+          compute_pending_d = 1'b0;
+          output_armed_d    = 1'b0;
+          state_d           = Output;
+        end else if (compute_done) begin
+          compute_pending_d = 1'b1;
+        end
+      end
+      Output: begin
+        if (output_done) begin
+          job_done        = 1'b1;
+          stream_clear    = 1'b1;
+          data_drained_d  = 1'b0;
+          scale_drained_d = 1'b0;
+          state_d         = MXCoreIdle;
+        end else if ((counter_pending > 0) && output_compatible && sources_ready) begin
+          start_job = 1'b1;
+          state_d   = ComputeAndOutput;
+        end
+      end
+      default: state_d = MXCoreIdle;
     endcase
+
+    if (start_job) begin
+      tile_count_d   = '0;
+      preload_wait_d = ctrl_engine_o.preload;
+    end
+    if (latch_output) begin
+      ctrl_output_d   = job_output;
+      data_drained_d  = 1'b0;
+      scale_drained_d = 1'b0;
+    end
+
+    ctrl_streamer_o.vector_a_source_ctrl.req_start      = start_job;
+    ctrl_streamer_o.vectors_b_source_ctrl.req_start     = start_job;
+    ctrl_streamer_o.scale_a_source_ctrl.req_start       = start_job;
+    ctrl_streamer_o.scale_b_source_ctrl.req_start       = start_job;
+    ctrl_streamer_o.preload_bias_source_ctrl.req_start  = start_job && ctrl_engine_o.preload;
+    ctrl_streamer_o.result_sink_ctrl.req_start          = arm_output_q;
+    ctrl_streamer_o.result_scale_sink_ctrl.req_start    = arm_output_q && ctrl_output_q.quantize_mxfp8;
 
     // ------------------------------------------ Matrix A Streamer Configuration ------------------------------------------- //
     ctrl_streamer_o.vector_a_source_ctrl.addressgen_ctrl.base_addr      = vector_a_addr;
@@ -337,27 +395,63 @@ module mxcore_hwpe_ctrl
     ctrl_streamer_o.preload_bias_source_ctrl.addressgen_ctrl.dim_enable_1h  = 4'b0000;
 
     // ------------------------------------------ Result Streamer Configuration ------------------------------------------- //
-    ctrl_streamer_o.result_sink_ctrl.addressgen_ctrl.base_addr          = result_addr;
-    ctrl_streamer_o.result_sink_ctrl.addressgen_ctrl.tot_len            = RESULT_TOT_LEN;
+    ctrl_streamer_o.result_sink_ctrl.addressgen_ctrl.base_addr          = ctrl_output_q.result_addr;
+    ctrl_streamer_o.result_sink_ctrl.addressgen_ctrl.tot_len            = ctrl_output_q.result_tot_len;
     ctrl_streamer_o.result_sink_ctrl.addressgen_ctrl.d0_stride          = MXCoreTCDMDataWidth / 8;
-    ctrl_streamer_o.result_sink_ctrl.addressgen_ctrl.d0_len             = RESULT_TOT_LEN;
+    ctrl_streamer_o.result_sink_ctrl.addressgen_ctrl.d0_len             = ctrl_output_q.result_tot_len;
     ctrl_streamer_o.result_sink_ctrl.addressgen_ctrl.d1_stride          = '0;
     ctrl_streamer_o.result_sink_ctrl.addressgen_ctrl.d1_len             = '0;
     ctrl_streamer_o.result_sink_ctrl.addressgen_ctrl.d2_stride          = '0;
     ctrl_streamer_o.result_sink_ctrl.addressgen_ctrl.dim_enable_1h      = 4'b0000;
 
     // --------------------------------------- Result Scale Streamer Configuration --------------------------------------- //
-    ctrl_streamer_o.result_scale_sink_ctrl.addressgen_ctrl.base_addr      = result_scale_addr;
-    ctrl_streamer_o.result_scale_sink_ctrl.addressgen_ctrl.tot_len        = RESULT_SCALE_TOT_LEN;
+    ctrl_streamer_o.result_scale_sink_ctrl.addressgen_ctrl.base_addr      = ctrl_output_q.result_scale_addr;
+    ctrl_streamer_o.result_scale_sink_ctrl.addressgen_ctrl.tot_len        = ctrl_output_q.result_scale_tot_len;
     ctrl_streamer_o.result_scale_sink_ctrl.addressgen_ctrl.d0_stride      = MXCoreTCDMDataWidth / 8;
-    ctrl_streamer_o.result_scale_sink_ctrl.addressgen_ctrl.d0_len         = RESULT_SCALE_TOT_LEN;
+    ctrl_streamer_o.result_scale_sink_ctrl.addressgen_ctrl.d0_len         = ctrl_output_q.result_scale_tot_len;
     ctrl_streamer_o.result_scale_sink_ctrl.addressgen_ctrl.d1_stride      = '0;
     ctrl_streamer_o.result_scale_sink_ctrl.addressgen_ctrl.d1_len         = '0;
     ctrl_streamer_o.result_scale_sink_ctrl.addressgen_ctrl.d2_stride      = '0;
     ctrl_streamer_o.result_scale_sink_ctrl.addressgen_ctrl.dim_enable_1h  = 4'b0000;
   end
 
-  `FF(state_q,      state_d,      MXCoreIdle)
-  `FF(tile_count_q, tile_count_d, '0)
+  logic [NumCores-1:0][REGFILE_N_EVT-1:0] pending_evt_d, pending_evt_q, compute_evt, job_done_evt;
+
+  always_comb begin
+    pending_evt_d = pending_evt_q;
+    if (job_done) begin
+      pending_evt_d = '0;
+    end
+    if (slave_done_q) begin
+      pending_evt_d = slave_flags.evt;
+    end
+  end
+
+  always_comb begin
+    job_done_evt = '0;
+    if (job_done) begin
+      for (int c = 0; c < NumCores; c++) begin
+        job_done_evt[c][1] = pending_evt_q[c][0];
+      end
+    end
+  end
+
+  assign compute_evt = slave_done_q ? slave_flags.evt : '0;
+
+  `FF(state_q,            state_d,            MXCoreIdle)
+  `FF(tile_count_q,       tile_count_d,       '0)
+  `FF(preload_wait_q,     preload_wait_d,     1'b0)
+  `FF(compute_pending_q,  compute_pending_d,  1'b0)
+  `FF(output_armed_q,     output_armed_d,     1'b0)
+  `FF(arm_output_q,       latch_output,       1'b0)
+  `FF(data_drained_q,     data_drained_d,     1'b0)
+  `FF(scale_drained_q,    scale_drained_d,    1'b0)
+  `FF(slave_done_q,       slave_ctrl.done,    1'b0)
+  `FF(ctrl_output_q,      ctrl_output_d,      '0)
+  `FF(pending_evt_q,      pending_evt_d,      '0)
+
+  assign evt_o    = compute_evt | job_done_evt;
+  assign busy_o   = (state_q != MXCoreIdle);
+  assign clear_o  = slave_clear || stream_clear;
 
 endmodule : mxcore_hwpe_ctrl

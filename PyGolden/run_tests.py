@@ -211,6 +211,7 @@ def generate_compile_tcl(cfg, defaults, workdir):
         "--define", f"QUANTIZE_MXFP8={quantize}",
         "--define", f"PROB_STALL={defaults['prob_stall']}",
         "--define", f"NO_STALLS={cfg['no_stalls']}",
+        "--define", f"NUM_JOBS={cfg.get('num_jobs', 1)}",
         "--define", "HCI_ASSERT_DELAY=#41ps",
     ]
 
@@ -245,6 +246,8 @@ def run_test(cfg, defaults):
     q_str = "MX" if quantize else "FP32"
     stall_str = "stall" if cfg["no_stalls"] == 0 else "nostall"
     name = f"{data_type}_VS{vs}_MX{npe}_O{reuse}_M{M}_K{K}_N{N}_{q_str}_{stall_str}"
+    if cfg.get("num_jobs", 1) > 1:
+        name += f"_jobs{cfg['num_jobs']}"
 
     tile_mode = classify_tile(M, N, reuse, npe)
     timeout = cfg.get("timeout_seconds", defaults.get("timeout_seconds", 120))
@@ -318,7 +321,7 @@ def run_test(cfg, defaults):
         sim_log = sim_proc.stdout + "\n" + sim_proc.stderr
         (workdir / "sim.log").write_text(sim_log)
 
-        if "Passed with no mismatches" in sim_log:
+        if "Failed with" not in sim_log and sim_log.count("Passed with no mismatches") >= cfg.get("num_jobs", 1):
             result["status"] = "PASS"
             result["reason"] = "No mismatches"
             _finish(name, True)

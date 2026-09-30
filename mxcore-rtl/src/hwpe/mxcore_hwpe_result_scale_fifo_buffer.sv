@@ -84,7 +84,7 @@ module mxcore_hwpe_result_scale_fifo_buffer #(
     if (data_i.valid && data_i.ready) begin
       push_fifo_valid[push_count_q] = 1'b1;
       push_count_d = (push_count_q == NFIFO-1) ? '0 : push_count_q + 1;
-      push_total_d = push_total_q + 1;
+      push_total_d = ((push_total_q + 1 == tot_pushes_i) && (push_count_d == '0)) ? '0 : push_total_q + 1;
     end
 
     data_o.valid        = flush_pending ? &(pop_fifo_valid | ~lane_active) : &pop_fifo_valid;

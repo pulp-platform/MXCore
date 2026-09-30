@@ -11,7 +11,7 @@ from . import mxcore_gemm_functions
 
 default_path = "./testvectors/"
 
-def gemm_mxcore_vector_gen(folder_path=default_path, data_type="FP8", acc_data_type="FP32", seed=None, fp9_scale_range=[-127, 128], set_max_fp9=False, set_min_fp9=False, is_fp32_subnormal=False, force_fp32=False, exponent_range_fp32=[-127, 128], force_output_zero=None, mdim=128, kdim=128, ndim=128, mxdotp_vector_size=8, num_mx_units=8, num_out_buffers=4, memory_data_width=32, block_size=32, use_external_data=False, preload=False, block_poison_enable=False):
+def gemm_mxcore_vector_gen(folder_path=default_path, data_type="FP8", acc_data_type="FP32", seed=None, fp9_scale_range=[-127, 128], set_max_fp9=False, set_min_fp9=False, is_fp32_subnormal=False, force_fp32=False, exponent_range_fp32=[-127, 128], force_output_zero=None, mdim=128, kdim=128, ndim=128, mxdotp_vector_size=8, num_mx_units=8, num_out_buffers=4, memory_data_width=32, block_size=32, use_external_data=False, preload=False, block_poison_enable=False, folder_name=None, job_tag=""):
 
     result_mx_block_size = block_size
     effective_vector_size = mxdotp_vector_size
@@ -27,9 +27,9 @@ def gemm_mxcore_vector_gen(folder_path=default_path, data_type="FP8", acc_data_t
         effective_vector_size = 2 * mxdotp_vector_size
         effective_block_size = 2 * block_size
 
-    folder_path = os.path.join(folder_path, "preload" if preload else "nopreload")
+    folder_path = os.path.join(folder_path, folder_name or ("preload" if preload else "nopreload"))
 
-    _tag = f"{data_type}_VS{mxdotp_vector_size}_MX{num_mx_units}_O{num_out_buffers}_M{mdim}_K{kdim}_N{ndim}_BS{block_size}"
+    _tag = f"{data_type}_VS{mxdotp_vector_size}_MX{num_mx_units}_O{num_out_buffers}_M{mdim}_K{kdim}_N{ndim}_BS{block_size}{job_tag}"
 
     memory_file    = os.path.join(folder_path, f"memory/data_memory_{_tag}.txt")
     result_file    = os.path.join(folder_path, f"result/result_{_tag}.txt")
@@ -99,6 +99,98 @@ def gemm_mxcore_vector_gen(folder_path=default_path, data_type="FP8", acc_data_t
         print(f"C Data Header File:     {header_file}")
         print(f"Dataflow Debug:         {dataflow_file}")
         print(f"Memory Debug:           {mem_debug_file}")
+
+    return {
+        "errors":      n_errors,
+        "memory":      memory_file,
+        "result":      result_file,
+        "result_mx":   result_mx_file,
+        "result_bf16": result_bf16_file,
+    }
+
+
+def gemm_mxcore_multi_job_gen(jobs, name, folder_path=default_path, l1_kib=128, mxdotp_vector_size=32, num_mx_units=32, num_out_buffers=64, memory_data_width=32, block_size=32):
+    mxcore_gemm_functions.MEMORY_EXPORT = True
+    half_bytes = l1_kib * 1024 // 2
+    line_bytes = memory_data_width // 8
+    out_dir = os.path.join(folder_path, "multicontext")
+    rows = []
+
+    for j, job in enumerate(jobs):
+        data_type = job.get("data_type", "FP8")
+        mdim, kdim, ndim = job["mdim"], job["kdim"], job["ndim"]
+        output = job.get("output", "FP32")
+        preload = job.get("preload", False)
+        seed = job.get("seed", j)
+
+        src_bits    = 4 if data_type == "FP4" else 8
+        scale_block = 2 * block_size if data_type == "FP4" else block_size
+        k_blocks    = -(-kdim // scale_block)
+        dst_bytes   = {"FP32": 4, "BF16": 2, "MXFP8": 1}[output]
+
+        a_bytes  = mdim * kdim * src_bits // 8
+        b_bytes  = kdim * ndim * src_bits // 8
+        sa_bytes = mdim * k_blocks
+        sb_bytes = ndim * k_blocks
+        c_bytes  = mdim * ndim * (4 if preload else dst_bytes)
+        sc_bytes = (mdim * ndim // block_size) if output == "MXFP8" else 0
+
+        footprint = a_bytes + b_bytes + sa_bytes + sb_bytes + c_bytes + sc_bytes
+        if footprint > half_bytes:
+            raise ValueError(f"Job {j}: footprint {footprint} B exceeds L1/2 = {half_bytes} B "
+                             f"({data_type} {mdim}x{kdim}x{ndim} -> {output}, preload={int(preload)})")
+
+        files = gemm_mxcore_vector_gen(
+            folder_path=folder_path,
+            folder_name="multicontext",
+            job_tag=f"_P{int(preload)}_S{seed}",
+            data_type=data_type,
+            seed=seed,
+            mdim=mdim,
+            kdim=kdim,
+            ndim=ndim,
+            mxdotp_vector_size=mxdotp_vector_size,
+            num_mx_units=num_mx_units,
+            num_out_buffers=num_out_buffers,
+            memory_data_width=memory_data_width,
+            block_size=block_size,
+            preload=preload,
+        )
+        if files["errors"] != 0:
+            raise RuntimeError(f"Job {j}: golden model reported {files['errors']} errors")
+
+        with open(files["memory"]) as f:
+            mem_bytes = sum(1 for line in f if line.strip()) * line_bytes
+        expected_mem_bytes = a_bytes + b_bytes + sa_bytes + sb_bytes + (c_bytes if preload else 0)
+        if mem_bytes != expected_mem_bytes:
+            raise ValueError(f"Job {j}: memory image is {mem_bytes} B, expected {expected_mem_bytes} B")
+
+        half   = j % 2
+        a_ptr  = half * half_bytes
+        b_ptr  = a_ptr + a_bytes
+        sa_ptr = b_ptr + b_bytes
+        sb_ptr = sa_ptr + sa_bytes
+        c_ptr  = sb_ptr + sb_bytes
+        sc_ptr = c_ptr + c_bytes
+
+        result_file  = {"FP32": files["result"], "BF16": files["result_bf16"], "MXFP8": files["result_mx"]}[output]
+        result_lines = mdim * ndim * dst_bytes // line_bytes
+
+        rows.append((j, half, mdim, kdim, ndim, int(preload), int(output == "MXFP8"), int(output == "BF16"),
+                     a_ptr, b_ptr, sa_ptr, sb_ptr, c_ptr, sc_ptr, result_lines, footprint,
+                     os.path.abspath(files["memory"]), os.path.abspath(result_file)))
+
+    manifest = os.path.join(out_dir, f"jobs_{name}.txt")
+    with open(manifest, "w") as f:
+        f.write(f"# L1 = {l1_kib} KiB, half = {half_bytes} B; layout per half: A | B | SA | SB | C | SC\n")
+        f.write("# job half M K N preload quantize_mxfp8 quantize_bf16 a_ptr b_ptr sa_ptr sb_ptr c_ptr sc_ptr result_lines footprint memory_file result_file\n")
+        for r in rows:
+            f.write(" ".join(str(x) for x in r) + "\n")
+
+    print(f"Multi-Context Manifest: {manifest}")
+    for r in rows:
+        print(f"  Job {r[0]}: half {r[1]}, {r[2]}x{r[3]}x{r[4]}, footprint {r[15]} B ({100.0 * r[15] / half_bytes:.2f} % of L1/2)")
+    return manifest
 
 
 if __name__ == "__main__":
@@ -246,12 +338,53 @@ if __name__ == "__main__":
         help="MX Block Size for MXCore GEMM (16 or 32; default: 32). Must be >= VS."
     )
 
+    multictx_group = parser.add_argument_group("Multi-Context Options")
+    multictx_group.add_argument(
+        "--num_jobs",
+        type=int,
+        default=0,
+        help="Generate a multi-context job sequence of this many jobs into multicontext/ (default: 0, disabled)"
+    )
+    multictx_group.add_argument(
+        "--output",
+        type=str,
+        choices=["FP32", "BF16", "MXFP8"],
+        default="FP32",
+        help="Output format of the multi-context jobs (default: FP32)"
+    )
+    multictx_group.add_argument(
+        "--l1_kib",
+        type=int,
+        default=128,
+        help="L1 size in KiB, double-buffered across contexts (default: 128)"
+    )
+
     args = parser.parse_args()
 
     # Set global flags
     utils.PRINT_ENABLED = args.print
     utils.DEBUG = args.debug
     mxcore_gemm_functions.MEMORY_EXPORT = args.memory_export
+
+    if args.num_jobs > 0:
+        multictx_name = (f"{args.data_type}_VS{args.mxdotp_vector_size}_MX{args.num_mx_units}_O{args.num_out_buffers}"
+                         f"_M{args.gemm_mdim}_K{args.gemm_kdim}_N{args.gemm_ndim}_BS{args.mx_block_size}"
+                         f"_{args.output}_P{int(args.preload)}_J{args.num_jobs}")
+        multictx_jobs = [dict(data_type=args.data_type, mdim=args.gemm_mdim, kdim=args.gemm_kdim, ndim=args.gemm_ndim,
+                              output=args.output, preload=args.preload, seed=args.main_seed + j)
+                         for j in range(args.num_jobs)]
+        gemm_mxcore_multi_job_gen(
+            multictx_jobs,
+            multictx_name,
+            folder_path=args.testvector_path,
+            l1_kib=args.l1_kib,
+            mxdotp_vector_size=args.mxdotp_vector_size,
+            num_mx_units=args.num_mx_units,
+            num_out_buffers=args.num_out_buffers,
+            memory_data_width=args.memory_data_width,
+            block_size=args.mx_block_size,
+        )
+        raise SystemExit(0)
 
     gemm_mxcore_vector_gen(
         folder_path=args.testvector_path,

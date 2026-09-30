@@ -36,6 +36,12 @@ module tb_mxcore_hwpe;
   parameter bit QuantizeMXFP8  = `ifdef QUANTIZE_MXFP8 `QUANTIZE_MXFP8 `else 1 `endif;
   parameter bit QuantizeBF16   = `ifdef QUANTIZE_BF16 `QUANTIZE_BF16 `else 0 `endif;
   parameter bit Preload        = `ifdef PRELOAD `PRELOAD `else 0 `endif;
+  parameter int unsigned NumJobs = `ifdef NUM_JOBS `NUM_JOBS `else 1 `endif;
+
+  // Multi-Context L1 Ping-Pong Parameters
+  parameter bit          MultiCtx         = `ifdef MULTICTX 1 `else 0 `endif;
+  parameter int unsigned L1Size           = `ifdef L1_KIB `L1_KIB*1024 `else 128*1024 `endif;
+  parameter int unsigned DmaBytesPerCycle = `ifdef DMA_BW `DMA_BW `else 64 `endif;
 
   // HWPE Parameters
   parameter real ProbStall = `ifdef NO_STALLS ((`NO_STALLS == 1) ? 0 : 0.1) `else 0.1 `endif;
@@ -82,20 +88,20 @@ module tb_mxcore_hwpe;
   localparam int unsigned MAT_RESULT_SIZE       = (QuantizeBF16 == 1) ? (MDIM*NDIM*16) : ((QuantizeMXFP8 == 1) ? (MDIM*NDIM*SRC_WIDTH) : (MDIM*NDIM*DST_WIDTH));
   localparam int unsigned MAT_RESULT_SCALE_SIZE = MDIM*NDIM*SCALE_WIDTH/MX_BLOCK_SIZE;
 
-  // Data Memory Size
-  localparam int unsigned GEMM_SIZE_FP32        = ((MAT_A_SIZE + MAT_B_SIZE + MAT_SCALE_A_SIZE + MAT_SCALE_B_SIZE + MAT_PRELOAD_BIAS_SIZE + MDIM*NDIM*DST_WIDTH) / 8);
-  localparam int unsigned GEMM_SIZE_BF16        = ((MAT_A_SIZE + MAT_B_SIZE + MAT_SCALE_A_SIZE + MAT_SCALE_B_SIZE + MAT_PRELOAD_BIAS_SIZE + MDIM*NDIM*16) / 8);
-  localparam int unsigned GEMM_SIZE_MXFP8       = ((MAT_A_SIZE + MAT_B_SIZE + MAT_SCALE_A_SIZE + MAT_SCALE_B_SIZE + MAT_PRELOAD_BIAS_SIZE + MDIM*NDIM*SRC_WIDTH + MDIM*NDIM*SCALE_WIDTH/MX_BLOCK_SIZE) / 8);
+  localparam int unsigned MAT_C_SIZE            = (Preload == 1) ? MAT_PRELOAD_BIAS_SIZE : MAT_RESULT_SIZE;
 
-  parameter MemorySize   = (QuantizeBF16 == 1) ? GEMM_SIZE_BF16 : ((QuantizeMXFP8 == 1) ? GEMM_SIZE_MXFP8 : GEMM_SIZE_FP32);
+  // Data Memory Size
+  localparam int unsigned MAT_INPUT_SIZE        = MAT_A_SIZE + MAT_B_SIZE + MAT_SCALE_A_SIZE + MAT_SCALE_B_SIZE;
+  localparam int unsigned JOB_OUTPUT_SIZE       = MAT_C_SIZE + MAT_RESULT_SCALE_SIZE;
+
+  parameter MemorySize   = MultiCtx ? L1Size : (MAT_INPUT_SIZE + NumJobs*JOB_OUTPUT_SIZE) / 8;
 
   // Input/Output Base Address Pointers
-  integer       BASE_PTR[7];
+  integer       BASE_PTR[6];
   logic [31:0]  BASE_PTR_VECTOR_A;
   logic [31:0]  BASE_PTR_VECTORS_B;
   logic [31:0]  BASE_PTR_SCALE_A;
   logic [31:0]  BASE_PTR_SCALE_B;
-  logic [31:0]  BASE_PTR_PRELOAD_BIAS;
   logic [31:0]  BASE_PTR_RESULT;
   logic [31:0]  BASE_PTR_RESULT_SCALE;
 
@@ -139,17 +145,15 @@ module tb_mxcore_hwpe;
     BASE_PTR[2] = BASE_PTR[1] + MAT_B_SIZE/8;
     BASE_PTR[3] = BASE_PTR[2] + MAT_SCALE_A_SIZE/8;
     BASE_PTR[4] = BASE_PTR[3] + MAT_SCALE_B_SIZE/8;
-    BASE_PTR[5] = BASE_PTR[4] + MAT_PRELOAD_BIAS_SIZE/8;
-    BASE_PTR[6] = BASE_PTR[5] + MAT_RESULT_SIZE/8;
+    BASE_PTR[5] = BASE_PTR[4] + MAT_C_SIZE/8;
 
     // Base Pointers
     BASE_PTR_VECTOR_A     = BASE_PTR[0];
     BASE_PTR_VECTORS_B    = BASE_PTR[1];
     BASE_PTR_SCALE_A      = BASE_PTR[2];
     BASE_PTR_SCALE_B      = BASE_PTR[3];
-    BASE_PTR_PRELOAD_BIAS = BASE_PTR[4];
-    BASE_PTR_RESULT       = BASE_PTR[5];
-    BASE_PTR_RESULT_SCALE = BASE_PTR[6];
+    BASE_PTR_RESULT       = BASE_PTR[4];
+    BASE_PTR_RESULT_SCALE = BASE_PTR[5];
   end
 
   generate
@@ -239,6 +243,130 @@ module tb_mxcore_hwpe;
     return stim_fd;
   endfunction
 
+  logic mem_loaded = 1'b0;
+
+`ifdef MULTICTX
+  typedef struct {
+    int unsigned  half, m, k, n, preload, quantize_mxfp8, quantize_bf16;
+    int unsigned  a_ptr, b_ptr, sa_ptr, sb_ptr, c_ptr, sc_ptr, result_lines, footprint;
+    string        memory_file, result_file;
+  } mc_job_t;
+
+  string        jobs_file = `JOBS_FILE;
+  mc_job_t      mc_jobs         [NumJobs];
+  bit           mc_inputs_free  [NumJobs];
+  bit           mc_c_free       [NumJobs];
+  logic [31:0]  mc_image        [L1Size/8];
+
+  task automatic mc_load_manifest();
+    integer fd, ret, idx;
+    string  line;
+    int     job;
+    fd = $fopen(jobs_file, "r");
+    if (fd == 0)
+      $fatal(1, "[TB] MXCORE: Could not open %s jobs file!", jobs_file);
+    job = 0;
+    while (!$feof(fd) && (job < NumJobs)) begin
+      ret = $fgets(line, fd);
+      if ((ret == 0) || (line.len() < 2) || (line[0] == "#"))
+        continue;
+      ret = $sscanf(line, "%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %s %s", idx,
+                    mc_jobs[job].half, mc_jobs[job].m, mc_jobs[job].k, mc_jobs[job].n,
+                    mc_jobs[job].preload, mc_jobs[job].quantize_mxfp8, mc_jobs[job].quantize_bf16,
+                    mc_jobs[job].a_ptr, mc_jobs[job].b_ptr, mc_jobs[job].sa_ptr, mc_jobs[job].sb_ptr,
+                    mc_jobs[job].c_ptr, mc_jobs[job].sc_ptr, mc_jobs[job].result_lines, mc_jobs[job].footprint,
+                    mc_jobs[job].memory_file, mc_jobs[job].result_file);
+      if ((mc_jobs[job].preload != Preload) || (mc_jobs[job].quantize_mxfp8 != (QuantizeMXFP8 && !QuantizeBF16)) || (mc_jobs[job].quantize_bf16 != QuantizeBF16))
+        $fatal(1, "[TB] MXCORE: Job %0d output format/preload does not match the compiled TB configuration!", job);
+      $display("[TB] Job %0d: half %0d, %0dx%0dx%0d, footprint %0d B", job, mc_jobs[job].half, mc_jobs[job].m, mc_jobs[job].k, mc_jobs[job].n, mc_jobs[job].footprint);
+      job++;
+    end
+    $fclose(fd);
+    if (job != NumJobs)
+      $fatal(1, "[TB] MXCORE: %s holds %0d jobs, expected %0d!", jobs_file, job, NumJobs);
+  endtask
+
+  task automatic mc_dma(input int job, input bit c_region, input bit paced);
+    int unsigned first, last;
+    $readmemh(mc_jobs[job].memory_file, mc_image);
+    first = c_region ? (mc_jobs[job].c_ptr - mc_jobs[job].a_ptr) / 4 : 0;
+    last  = c_region ? (first + (mc_jobs[job].preload ? mc_jobs[job].m * mc_jobs[job].n : 0)) : first + (mc_jobs[job].c_ptr - mc_jobs[job].a_ptr) / 4;
+    for (int unsigned w = first; w < last; w++) begin
+      tb_mxcore_hwpe.i_data_memory.memory[mc_jobs[job].a_ptr/4 + w] = mc_image[w];
+      if (paced && (((w - first + 1) % (DmaBytesPerCycle/4)) == 0))
+        @(posedge clk);
+    end
+  endtask
+
+  initial begin
+    logic [31:0] status;
+    $timeformat(-9, 2, " ns", 10);
+
+    wait (rst_n);
+
+    mc_load_manifest();
+    for (int job = 0; (job < NumJobs) && (job < 2); job++) begin
+      mc_dma(job, 1'b0, 1'b0);
+      mc_dma(job, 1'b1, 1'b0);
+    end
+    mem_loaded = 1'b1;
+
+    // Soft Clear
+    PERIPH_WRITE(32'h14, 32'h0, 32'h0, clk);
+
+    for (int job = 0; job < NumJobs; job++) begin
+      if (job >= 2) begin
+        wait (mc_inputs_free[job-2]);
+        mc_dma(job, 1'b0, 1'b1);
+        wait (mc_c_free[job-2]);
+        mc_dma(job, 1'b1, 1'b1);
+        $display("[TB] Job %0d: DMA into half %0d done @ %0t", job, mc_jobs[job].half, $time);
+      end
+
+      // Acquire Job
+      status = '1;
+      while (status[31])
+        PERIPH_READ(32'h04, 32'h0, status, clk);
+      $display("[TB] Job %0d: acquired context %0d @ %0t", job, status, $time);
+
+      // MXCORE Compute
+      mxcore_compute(mc_jobs[job].m, mc_jobs[job].k, mc_jobs[job].n, fpnew_pkg::RNE, fpnew_pkg::SDOTP, 0, SRC_FMT, DST_FMT, '0, '0, '0, 0,
+                     mc_jobs[job].quantize_mxfp8, mc_jobs[job].quantize_bf16, mc_jobs[job].preload,
+                     mc_jobs[job].a_ptr, mc_jobs[job].b_ptr, mc_jobs[job].sa_ptr, mc_jobs[job].sb_ptr, mc_jobs[job].c_ptr, mc_jobs[job].sc_ptr, clk);
+    end
+  end
+
+  initial begin
+    int compute_count, done_count;
+
+    wait (mem_loaded);
+
+    compute_count = 0;
+    done_count    = 0;
+    while (done_count < NumJobs) begin
+      @(posedge clk);
+      if (evt[0][0]) begin
+        $display("[TB] Job %0d: compute done event @ %0t", compute_count, $time);
+        mc_inputs_free[compute_count] = 1'b1;
+        compute_count++;
+      end
+      if (evt[0][1]) begin
+        $display("[TB] Job %0d: done event @ %0t", done_count, $time);
+        compare_output(mc_jobs[done_count].result_file, mc_jobs[done_count].c_ptr, mc_jobs[done_count].sc_ptr, mc_jobs[done_count].result_lines);
+        mc_c_free[done_count] = 1'b1;
+        done_count++;
+      end
+    end
+
+    // Soft Clear
+    PERIPH_WRITE(32'h14, 32'h0, 32'h0, clk);
+
+    #(10ns);
+
+    // Finish the Simulation
+    $finish;
+  end
+`else
   initial begin
     logic [31:0] status;
     $timeformat(-9, 2, " ns", 10);
@@ -248,31 +376,57 @@ module tb_mxcore_hwpe;
 
     // Load Memory
     $readmemh(memory_file, tb_mxcore_hwpe.i_data_memory.memory);
+    if (Preload == 1)
+      for (int job = 1; job < NumJobs; job++)
+        for (int w = 0; w < MAT_PRELOAD_BIAS_SIZE/32; w++)
+          tb_mxcore_hwpe.i_data_memory.memory[(BASE_PTR_RESULT + job*(JOB_OUTPUT_SIZE/8))/4 + w] = tb_mxcore_hwpe.i_data_memory.memory[BASE_PTR_RESULT/4 + w];
+    mem_loaded = 1'b1;
 
     // Soft Clear
     PERIPH_WRITE(32'h14, 32'h0, 32'h0, clk);
 
-    // Acquire Job
-    status = -1;
-    while(status < 32'h00)
-      PERIPH_READ(32'h04, 32'h0, status, clk);
+    for (int job = 0; job < NumJobs; job++) begin
+      // Acquire Job
+      status = '1;
+      while (status[31])
+        PERIPH_READ(32'h04, 32'h0, status, clk);
+      $display("[TB] Job %0d: acquired context %0d @ %0t", job, status, $time);
 
-    // MXCORE Compute
-    mxcore_compute(MDIM, KDIM, NDIM, fpnew_pkg::RNE, fpnew_pkg::SDOTP, 0, SRC_FMT, DST_FMT, '0, '0, '0, 0, QuantizeMXFP8, QuantizeBF16, Preload, clk);
+      // MXCORE Compute
+      mxcore_compute(MDIM, KDIM, NDIM, fpnew_pkg::RNE, fpnew_pkg::SDOTP, 0, SRC_FMT, DST_FMT, '0, '0, '0, 0, QuantizeMXFP8, QuantizeBF16, Preload,
+                     BASE_PTR_VECTOR_A, BASE_PTR_VECTORS_B, BASE_PTR_SCALE_A, BASE_PTR_SCALE_B,
+                     BASE_PTR_RESULT + job*(JOB_OUTPUT_SIZE/8), BASE_PTR_RESULT_SCALE + job*(JOB_OUTPUT_SIZE/8), clk);
+    end
+  end
 
-    // Wait for Finish
-    wait(evt);
+  initial begin
+    int evt_count;
+
+    wait (mem_loaded);
+
+    evt_count = 0;
+    while (evt_count < NumJobs) begin
+      @(posedge clk);
+      if (evt[0][0])
+        $display("[TB] Compute done event @ %0t", $time);
+      if (evt[0][1]) begin
+        $display("[TB] Job %0d: done event @ %0t", evt_count, $time);
+        evt_count++;
+      end
+    end
 
     // Soft Clear
     PERIPH_WRITE(32'h14, 32'h0, 32'h0, clk);
 
     #(10ns);
 
-    compare_output(result_file, BASE_PTR[5]);
+    for (int job = 0; job < NumJobs; job++)
+      compare_output(result_file, BASE_PTR_RESULT + job*(JOB_OUTPUT_SIZE/8), BASE_PTR_RESULT_SCALE + job*(JOB_OUTPUT_SIZE/8), MAT_RESULT_SIZE/32);
 
     // Finish the Simulation
     $finish;
   end
+`endif
 
   task automatic mxcore_compute(
     input logic [31:0]              MDIM,
@@ -290,27 +444,23 @@ module tb_mxcore_hwpe;
     input logic                     quantize_mxfp8,
     input logic                     quantize_bf16,
     input logic                     preload,
+    input logic [31:0]              vector_a_base_ptr,
+    input logic [31:0]              vectors_b_base_ptr,
+    input logic [31:0]              scale_a_base_ptr,
+    input logic [31:0]              scale_b_base_ptr,
+    input logic [31:0]              result_base_ptr,
+    input logic [31:0]              result_scale_base_ptr,
     ref   logic                     clk_i
   );
     logic [31:0] ctrl_engine_val;
-    logic [31:0] vector_a_base_ptr      = BASE_PTR_VECTOR_A;
-    logic [31:0] vectors_b_base_ptr     = BASE_PTR_VECTORS_B;
-    logic [31:0] scale_a_base_ptr       = BASE_PTR_SCALE_A;
-    logic [31:0] scale_b_base_ptr       = BASE_PTR_SCALE_B;
-    logic [31:0] preload_bias_base_ptr  = BASE_PTR_PRELOAD_BIAS;
-    logic [31:0] result_base_ptr        = BASE_PTR_RESULT;
-    logic [31:0] result_scale_base_ptr  = BASE_PTR_RESULT_SCALE;
 
     //  Get the Engine Control Value
     ctrl_engine_val_compute(rnd_mode, op, op_mod, src_fmt, dst_fmt, tag, mask, aux, flush, quantize_mxfp8, quantize_bf16, preload, ctrl_engine_val);
     $display(" - MXCore Engine Control Register: 0x%0h", ctrl_engine_val);
 
     // Program MXCore
-    PROGRAM_MXCORE(vector_a_base_ptr, vectors_b_base_ptr, scale_a_base_ptr, scale_b_base_ptr, preload_bias_base_ptr, result_base_ptr, result_scale_base_ptr, ctrl_engine_val, MDIM, KDIM, NDIM, clk_i);
+    PROGRAM_MXCORE(vector_a_base_ptr, vectors_b_base_ptr, scale_a_base_ptr, scale_b_base_ptr, result_base_ptr, result_base_ptr, result_scale_base_ptr, ctrl_engine_val, MDIM, KDIM, NDIM, clk_i);
 
-    // Wait for MXCore to finish
-    @(posedge clk_i);
-    wait(busy == 1'b0);
     // Trigger MXCore
     PERIPH_WRITE( 32'h0, 32'h0, 32'h0, clk_i );
 
@@ -375,7 +525,7 @@ module tb_mxcore_hwpe;
     return result;
   endfunction
 
-  task automatic compare_output(string STIM_DATA, integer address);
+  task automatic compare_output(string STIM_DATA, integer address, integer scale_address, integer result_lines);
     integer stim_fd;
     integer ret_code;
     integer counter;
@@ -394,6 +544,8 @@ module tb_mxcore_hwpe;
     counter = address/4;
     line_num = 0;
     while (!$feof(stim_fd)) begin
+      if (line_num == result_lines)
+        counter = scale_address/4;
       ret_code = $fscanf(stim_fd, "%x\n", exp_res);
       line_num++;
       if (exp_res !== tb_mxcore_hwpe.i_data_memory.memory[counter]) begin
@@ -536,7 +688,6 @@ module tb_mxcore_hwpe;
     data = periph.r_data;
 
     // Termination Phase
-    @(posedge clk_i);
     periph.req  = 1'b0;
     periph.add  = 32'b0;
     periph.wen  = 1'b1;     // Default State

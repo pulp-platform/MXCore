@@ -37,6 +37,12 @@ quantize_mxfp8 ?= 1
 quantize_bf16 ?= 0
 # Accumulator Preload
 preload ?= 1
+# Multi-Context: Number of Jobs Queued Back-to-Back
+num_jobs ?= 1
+# Multi-Context: L1 Ping-Pong with testvectors/multicontext/ Job Sequences
+multictx ?= 0
+l1_kib ?= 128
+dma_bw ?= 64
 # Stalling in TB
 no_stalls ?= 1
 prob_stall ?= 10 # 10% stall probability
@@ -71,6 +77,15 @@ vlog_defs += -DM=$(mdim) -DK=$(kdim) -DN=$(ndim) -DQUANTIZE_MXFP8=$(quantize_mxf
 vlog_defs += -DPROB_STALL=$(prob_stall) -DNO_STALLS=$(no_stalls)
 ifdef preload_threshold
 	vlog_defs += -DPRELOAD_THRESHOLD=$(preload_threshold)
+endif
+vlog_defs += -DNUM_JOBS=$(num_jobs)
+ifdef n_context
+	vlog_defs += -DN_CONTEXT=$(n_context)
+endif
+ifeq ($(multictx), 1)
+	output_fmt := $(if $(filter 1,$(quantize_bf16)),BF16,$(if $(filter 1,$(quantize_mxfp8)),MXFP8,FP32))
+	jobs_file ?= ${ROOT_DIR}/testvectors/multicontext/jobs_${src_fmt}_VS${vector_size}_MX${num_compute_units}_O${num_out_buffers}_M${mdim}_K${kdim}_N${ndim}_BS${block_size}_${output_fmt}_P${preload}_J${num_jobs}.txt
+	vlog_defs += -DMULTICTX -DJOBS_FILE="\"$(jobs_file)\"" -DL1_KIB=$(l1_kib) -DDMA_BW=$(dma_bw)
 endif
 
 ifeq ($(target), tb_mxcore_hwpe)
