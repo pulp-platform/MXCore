@@ -11,7 +11,7 @@ from . import mxcore_gemm_functions
 
 default_path = "./testvectors/"
 
-def gemm_mxcore_vector_gen(folder_path=default_path, data_type="FP8", acc_data_type="FP32", seed=None, fp9_scale_range=[-127, 128], set_max_fp9=False, set_min_fp9=False, is_fp32_subnormal=False, force_fp32=False, exponent_range_fp32=[-127, 128], force_output_zero=None, mdim=128, kdim=128, ndim=128, mxdotp_vector_size=8, num_mx_units=8, num_out_buffers=4, memory_data_width=32, block_size=32, use_external_data=False, preload=False, block_poison_enable=False):
+def gemm_mxcore_vector_gen(folder_path=default_path, data_type="FP8", acc_data_type="FP32", seed=None, fp9_scale_range=[-127, 128], set_max_fp9=False, set_min_fp9=False, is_fp32_subnormal=False, force_fp32=False, exponent_range_fp32=[-127, 128], force_output_zero=None, mdim=128, kdim=128, ndim=128, mxdotp_vector_size=8, num_mx_units=8, num_out_buffers=4, memory_data_width=32, block_size=32, use_external_data=False, preload=False):
 
     result_mx_block_size = block_size
     effective_vector_size = mxdotp_vector_size
@@ -80,7 +80,6 @@ def gemm_mxcore_vector_gen(folder_path=default_path, data_type="FP8", acc_data_t
         dataflow_file=dataflow_file if mxcore_gemm_functions.MEMORY_EXPORT else None,
         mem_debug_file=mem_debug_file if mxcore_gemm_functions.MEMORY_EXPORT else None,
         preload=preload,
-        block_poison_enable=block_poison_enable,
     )
 
     if n_errors == 0 and mxcore_gemm_functions.MEMORY_EXPORT:

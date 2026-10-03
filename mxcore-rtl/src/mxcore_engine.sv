@@ -14,24 +14,13 @@ module mxcore_engine
   input  logic                                          clk_i,
   input  logic                                          rst_ni,
   input  logic                                          clear_i,
-  // Vector A
-  input  logic                                          vector_a_valid_i,
-  output logic                                          vector_a_ready_o,
-  input  logic [VectorSize-1:0][SRC_WIDTH-1:0]          vector_a_i,
-  // Scale A
-  input  logic                                          scale_a_valid_i,
-  output logic                                          scale_a_ready_o,
-  input  logic [SCALE_WIDTH-1:0]                        scale_a_i,
-  // Vectors B
-  input  logic                                          vectors_b_valid_i,
-  output logic                                          vectors_b_ready_o,
-  input  logic [InputDataWidth-1:0]                     vectors_b_i,
-  // Scale B
-  input  logic                                          scale_b_valid_i,
-  output logic                                          scale_b_ready_o,
-  input  logic [InputDataWidth-1:0]                     scale_b_i,
-  input  logic                                          sbmat_lt_bw_i,
+  // Input signals
+  hwpe_stream_intf_stream.sink                          vector_a_i,
+  hwpe_stream_intf_stream.sink                          scale_a_i,
+  hwpe_stream_intf_stream.sink                          vectors_b_i,
+  hwpe_stream_intf_stream.sink                          scale_b_i,
   // Input Control/Configuration Signals
+  input  logic                                          sbmat_lt_bw_i,
   input  fpnew_pkg::roundmode_e                         rnd_mode_i,
   input  fpnew_pkg::operation_e                         op_i,
   input  logic                                          op_mod_i,
@@ -41,17 +30,12 @@ module mxcore_engine
   input  logic [15:0]                                   ireuse_i,
   input  logic                                          flush_i,
   // Output Signals
-  output logic [NPE-1:0][DST_WIDTH-1:0]                 result_o,
-  // Output Handshake Signals
-  output logic                                          out_valid_o,
-  input  logic                                          out_ready_i,
+  hwpe_stream_intf_stream.source                        result_o,
   // Indication of valid data in flight
   output logic                                          busy_o
 );
 
-  localparam int unsigned VectorBSegments   = (LaneWidth > InputDataWidth) ? (LaneWidth / InputDataWidth) : 1;
-  localparam int unsigned VectorsBDataWidth = (NPE*LaneWidth < InputDataWidth) ? (NPE*LaneWidth) : InputDataWidth;
-  localparam int unsigned ScaleBDataWidth   = (NPE*SCALE_WIDTH < InputDataWidth) ? (NPE*SCALE_WIDTH) : InputDataWidth;
+  localparam int unsigned ScaleBDataWidth   = (NPE*MXCoreScaleDataWidth < InputDataWidth) ? (NPE*MXCoreScaleDataWidth) : InputDataWidth;
   localparam int unsigned ScaleFactor       = BlockSize / VectorSize;
   localparam int unsigned AddrWidth         = (Reuse > 1) ? $clog2(Reuse) : 1;
 
@@ -63,9 +47,8 @@ module mxcore_engine
 
   // Vector B Buffer Signals
   logic                                     vector_b_valid;
-  logic [NPE*VectorBSegments-1:0]           vector_b_write_enable;
+  logic [NPE-1:0]                           vector_b_write_enable;
   logic                                     vector_b_write_addr;
-  logic [VectorsBDataWidth-1:0]             vectors_b;
   logic                                     vector_b_read_addr;
 
   // Scale B Buffer Signals
@@ -86,24 +69,24 @@ module mxcore_engine
   logic [AddrWidth-1:0]                     output_buffer_tile_addr;
 
   // Input Multiplexing
-  logic [VectorSize-1:0][SRC_WIDTH-1:0]     vector_a;
-  logic [SCALE_WIDTH-1:0]                   scale_a;
+  logic [MXCoreVectorDataWidth-1:0]         vector_a;
+  logic [MXCoreScaleDataWidth-1:0]          scale_a;
 
   // Iteration Status Signals
   logic first_iter, last_iter;
   logic inputs_valid, in_accept, in_fire, out_fire;
 
   // Inputs after the first iteration also need their partial result from the output buffer
-  assign inputs_valid       = vector_a_valid_i && scale_a_valid_i && vector_b_valid && scale_b_valid;
+  assign inputs_valid       = vector_a_i.valid && scale_a_i.valid && vector_b_valid && scale_b_valid;
   assign in_accept          = first_iter || obuff_result_valid;
   assign in_fire            = inputs_valid && in_accept && mxdotp_in_ready;
   assign out_fire           = mxdotp_result_valid && mxdotp_result_ready;
 
   assign obuff_result_ready = in_fire && !first_iter;
-  assign tile_result_ready  = out_ready_i;
+  assign tile_result_ready  = result_o.ready;
 
-  assign vector_a           = in_fire ? vector_a_i : '0;
-  assign scale_a            = in_fire ? scale_a_i  : '0;
+  assign vector_a           = in_fire ? vector_a_i.data : '0;
+  assign scale_a            = in_fire ? scale_a_i.data  : '0;
 
   mxcore_reuse_counters #(
     .Reuse  ( Reuse )
@@ -119,42 +102,42 @@ module mxcore_engine
   );
 
   mxcore_b_buffer_ctrl #(
-    .InputDataWidth   ( InputDataWidth  ),
-    .OutputDataWidth  ( NPE*LaneWidth   ),
-    .NPE              ( NPE             ),
-    .ReuseFactor      ( Reuse           ),
-    .ScaleFactor      ( 1               )
+    .InputDataWidth   ( InputDataWidth            ),
+    .OutputDataWidth  ( NPE*MXCoreVectorDataWidth ),
+    .NPE              ( NPE                       ),
+    .ReuseFactor      ( Reuse                     ),
+    .ScaleFactor      ( 1                         )
   ) i_vector_b_buffer_ctrl (
     .clk_i          ( clk_i                 ),
     .rst_ni         ( rst_ni                ),
     .clear_i        ( clear_i               ),
     .sbmat_lt_bw_i  ( 1'b0                  ),
-    .data_valid_i   ( vectors_b_valid_i     ),
-    .data_ready_o   ( vectors_b_ready_o     ),
-    .data_i         ( vectors_b_i           ),
+    .data_valid_i   ( vectors_b_i.valid     ),
+    .data_ready_o   ( vectors_b_i.ready     ),
+    .data_i         ( vectors_b_i.data      ),
     .data_valid_o   ( vector_b_valid        ),
     .data_ready_i   ( in_fire               ),
     .write_enable_o ( vector_b_write_enable ),
     .write_addr_o   ( vector_b_write_addr   ),
-    .write_data_o   ( vectors_b             ),
+    .write_data_o   (                       ),
     .read_addr_o    ( vector_b_read_addr    ),
     .empty_o        (                       )
   );
 
   mxcore_b_buffer_ctrl #(
-    .InputDataWidth   ( InputDataWidth    ),
-    .OutputDataWidth  ( NPE*SCALE_WIDTH   ),
-    .NPE              ( NPE               ),
-    .ReuseFactor      ( Reuse             ),
-    .ScaleFactor      ( ScaleFactor       )
+    .InputDataWidth   ( InputDataWidth            ),
+    .OutputDataWidth  ( NPE*MXCoreScaleDataWidth  ),
+    .NPE              ( NPE                       ),
+    .ReuseFactor      ( Reuse                     ),
+    .ScaleFactor      ( ScaleFactor               )
   ) i_scale_b_buffer_ctrl (
     .clk_i          ( clk_i                 ),
     .rst_ni         ( rst_ni                ),
     .clear_i        ( clear_i               ),
     .sbmat_lt_bw_i  ( sbmat_lt_bw_i         ),
-    .data_valid_i   ( scale_b_valid_i       ),
-    .data_ready_o   ( scale_b_ready_o       ),
-    .data_i         ( scale_b_i             ),
+    .data_valid_i   ( scale_b_i.valid       ),
+    .data_ready_o   ( scale_b_i.ready       ),
+    .data_i         ( scale_b_i.data        ),
     .data_valid_o   ( scale_b_valid         ),
     .data_ready_i   ( in_fire               ),
     .write_enable_o ( scale_b_write_enable  ),
@@ -192,7 +175,7 @@ module mxcore_engine
     .rst_ni                       ( rst_ni                      ),
     .vector_a_i                   ( vector_a                    ),
     .scale_a_i                    ( scale_a                     ),
-    .vectors_b_i                  ( vectors_b                   ),
+    .vectors_b_i                  ( vectors_b_i.data            ),
     .vector_b_write_enable_i      ( vector_b_write_enable       ),
     .vector_b_write_addr_i        ( vector_b_write_addr         ),
     .vector_b_read_addr_i         ( vector_b_read_addr          ),
@@ -220,10 +203,11 @@ module mxcore_engine
     .busy_o                       ( mxdotp_busy                 )
   );
 
-  assign vector_a_ready_o = in_fire;
-  assign scale_a_ready_o  = in_fire;
-  assign result_o         = tile_result;
-  assign out_valid_o      = tile_result_valid;
+  assign vector_a_i.ready = in_fire;
+  assign scale_a_i.ready  = in_fire;
+  assign result_o.valid   = tile_result_valid;
+  assign result_o.data    = tile_result;
+  assign result_o.strb    = '1;
   assign busy_o           = mxdotp_busy || !obuff_empty;
 
 endmodule: mxcore_engine

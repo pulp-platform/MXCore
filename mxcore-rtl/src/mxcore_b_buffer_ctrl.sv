@@ -13,9 +13,6 @@ module mxcore_b_buffer_ctrl #(
   parameter int unsigned ReuseFactor      = 64,
   parameter int unsigned ScaleFactor      = 1,
   // Do not change the following parameters
-  parameter int unsigned PeDataWidth      = OutputDataWidth / NPE,
-  parameter int unsigned NSEG             = (PeDataWidth > InputDataWidth) ? (PeDataWidth / InputDataWidth) : 1,
-  parameter int unsigned NUNITS           = NPE * NSEG,
   parameter int unsigned WriteDataWidth   = (OutputDataWidth < InputDataWidth) ? OutputDataWidth : InputDataWidth
 ) (
   // Global Signals
@@ -32,7 +29,7 @@ module mxcore_b_buffer_ctrl #(
   output logic                        data_valid_o,
   input  logic                        data_ready_i,
   // Buffer Control
-  output logic [NUNITS-1:0]           write_enable_o,
+  output logic [NPE-1:0]              write_enable_o,
   output logic                        write_addr_o,
   output logic [WriteDataWidth-1:0]   write_data_o,
   output logic                        read_addr_o,
@@ -40,8 +37,8 @@ module mxcore_b_buffer_ctrl #(
   output logic                        empty_o
 );
 
-  localparam int unsigned UnitDataWidth  = PeDataWidth / NSEG;
-  localparam int unsigned UnitsPerWrite  = WriteDataWidth / UnitDataWidth;
+  localparam int unsigned PeDataWidth    = OutputDataWidth / NPE;
+  localparam int unsigned UnitsPerWrite  = WriteDataWidth / PeDataWidth;
   localparam int unsigned NWORDS         = (OutputDataWidth > InputDataWidth) ? (OutputDataWidth / InputDataWidth) : 1;
   localparam int unsigned POP_COUNT      = (InputDataWidth > OutputDataWidth) ? (InputDataWidth / OutputDataWidth) : 1;
 
@@ -53,7 +50,7 @@ module mxcore_b_buffer_ctrl #(
   logic [$clog2(ReuseFactor+1)-1:0]     reuse_count_d, reuse_count_q;
   logic [$clog2(ScaleFactor+1)-1:0]     scale_reuse_count_d, scale_reuse_count_q;
 
-  logic [NUNITS-1:0]                    write_enable;
+  logic [NPE-1:0]                       write_enable;
   logic [WriteDataWidth-1:0]            write_data;
 
   generate

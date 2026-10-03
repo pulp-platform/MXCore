@@ -15,21 +15,21 @@ module mxcore_hwpe_top
   parameter int unsigned NumCores = mxcore_hwpe_package::NumCores
 ) (
   // Global Signals
-  input  logic                                  clk_i,
-  input  logic                                  rst_ni,
-  input  logic                                  test_mode_i,
+  input  logic                                    clk_i,
+  input  logic                                    rst_ni,
+  input  logic                                    test_mode_i,
   // Events
-  output logic [NumCores-1:0][REGFILE_N_EVT-1:0] evt_o,
-  output logic                                  busy_o,
+  output logic [NumCores-1:0][REGFILE_N_EVT-1:0]  evt_o,
+  output logic                                    busy_o,
   // TCDM Master Ports
-  hci_core_intf.initiator                       tcdm,
+  hci_core_intf.initiator                         tcdm,
   // Peripheral Slave Port
-  hwpe_ctrl_intf_periph.slave                   periph
+  hwpe_ctrl_intf_periph.slave                     periph
 );
 
   // Control and Status Signals
   logic                 enable, clear;
-  logic                 quantize_any;
+  logic                 quantize_result;
   ctrl_streamer_t       streamer_ctrl;
   flags_streamer_t      streamer_flags;
   ctrl_engine_t         engine_ctrl;
@@ -74,13 +74,13 @@ module mxcore_hwpe_top
   );
 
   hwpe_stream_intf_stream #(
-    .DATA_WIDTH ( MXCoreVectorADataWidth  )
+    .DATA_WIDTH ( MXCoreVectorDataWidth   )
   ) mxcore_engine_vector_a (
     .clk ( clk_i )
   );
 
   hwpe_stream_intf_stream #(
-    .DATA_WIDTH ( MXCoreScaleADataWidth   )
+    .DATA_WIDTH ( MXCoreScaleDataWidth    )
   ) mxcore_engine_scale_a (
     .clk ( clk_i )
   );
@@ -140,12 +140,12 @@ module mxcore_hwpe_top
   );
   // ----------------- END: Input and Output HWPE Data Streams ----------------- //
 
-  // --------------------------- BEGIN: Input Buffers  ------------------------- //
+  // ---------------------- BEGIN: Broadcast Input Buffers  --------------------- //
   // Matrix A Buffer
   mxcore_hwpe_fifo_buffer #(
-    .InputDataWidth   ( MXCoreTCDMDataWidth      ),
-    .OutputDataWidth  ( MXCoreVectorADataWidth  ),
-    .FifoDepth         ( 2                   )
+    .InputDataWidth   ( MXCoreTCDMDataWidth   ),
+    .OutputDataWidth  ( MXCoreVectorDataWidth ),
+    .FifoDepth        ( 2                     )
   ) i_vector_a_buffer (
     .clk_i  ( clk_i                         ),
     .rst_ni ( rst_ni                        ),
@@ -156,11 +156,11 @@ module mxcore_hwpe_top
 
   // Scale A Buffer
   mxcore_hwpe_fifo_scale_buffer #(
-    .InputDataWidth   ( MXCoreTCDMDataWidth              ),
-    .OutputDataWidth  ( MXCoreScaleADataWidth           ),
-    .ReuseFactor       ( Reuse                       ),
-    .ScaleFactor       ( BlockSize / VectorSize     ),
-    .FifoDepth         ( 2                           )
+    .InputDataWidth   ( MXCoreTCDMDataWidth     ),
+    .OutputDataWidth  ( MXCoreScaleDataWidth    ),
+    .ReuseFactor      ( Reuse                   ),
+    .ScaleFactor      ( BlockSize / VectorSize  ),
+    .FifoDepth        ( 2                       )
   ) i_scale_a_buffer (
     .clk_i              ( clk_i                         ),
     .rst_ni             ( rst_ni                        ),
@@ -168,7 +168,7 @@ module mxcore_hwpe_top
     .data_i             ( mxcore_scale_a.sink           ),
     .data_o             ( mxcore_engine_scale_a.source  )
   );
-  // --------------------------- END: Input Buffers  --------------------------- //
+  // ---------------------- END: Broadcast Input Buffers  ----------------------- //
 
   // ------------------------- MXCore HWPE Controller -------------------------- //
   mxcore_hwpe_ctrl #(
@@ -204,14 +204,14 @@ module mxcore_hwpe_top
   );
 
   // ------------------------ MXCore Engine Result DEMUX ----------------------- //
-  assign quantize_any                     = engine_ctrl.quantize_mxfp8 || engine_ctrl.quantize_bf16;
-  assign engine_result_to_quantizer.valid = quantize_any ? mxcore_engine_result.valid : 1'b0;
+  assign quantize_result                  = engine_ctrl.quantize_mxfp8 || engine_ctrl.quantize_bf16;
+  assign engine_result_to_quantizer.valid = quantize_result ? mxcore_engine_result.valid : 1'b0;
   assign engine_result_to_quantizer.data  = mxcore_engine_result.data;
   assign engine_result_to_quantizer.strb  = mxcore_engine_result.strb;
-  assign engine_result_to_fifo.valid      = quantize_any ? 1'b0 : mxcore_engine_result.valid;
+  assign engine_result_to_fifo.valid      = quantize_result ? 1'b0 : mxcore_engine_result.valid;
   assign engine_result_to_fifo.data       = mxcore_engine_result.data;
   assign engine_result_to_fifo.strb       = mxcore_engine_result.strb;
-  assign mxcore_engine_result.ready       = quantize_any ? engine_result_to_quantizer.ready : engine_result_to_fifo.ready;
+  assign mxcore_engine_result.ready       = quantize_result ? engine_result_to_quantizer.ready : engine_result_to_fifo.ready;
 
   // ------------------------- MX Result Quantizer ----------------------------- //
   mxcore_hwpe_block_quantizer #(
@@ -221,7 +221,6 @@ module mxcore_hwpe_top
   ) i_result_quantizer (
     .clk_i              ( clk_i                           ),
     .rst_ni             ( rst_ni                          ),
-    .block_poison_i     ( engine_ctrl.block_poison_enable ),
     .quantize_mxfp8_i   ( engine_ctrl.quantize_mxfp8      ),
     .quantize_bf16_i    ( engine_ctrl.quantize_bf16       ),
     .fp32_result_i      ( engine_result_to_quantizer.sink ),
@@ -291,7 +290,7 @@ module mxcore_hwpe_top
                                           engine_ctrl.quantize_mxfp8 ? mxcore_quantized_result.strb  : mxcore_fp32_result.strb;
   assign mxcore_bf16_result.ready       = engine_ctrl.quantize_bf16  ? mxcore_result.ready : 1'b0;
   assign mxcore_quantized_result.ready  = engine_ctrl.quantize_mxfp8 ? mxcore_result.ready : 1'b0;
-  assign mxcore_fp32_result.ready       = quantize_any               ? 1'b0 : mxcore_result.ready;
+  assign mxcore_fp32_result.ready       = quantize_result            ? 1'b0 : mxcore_result.ready;
 
   // -------------------------- MXCore HWPE Streamer --------------------------- //
   assign enable = 1'b1;

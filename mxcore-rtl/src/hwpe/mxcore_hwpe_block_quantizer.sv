@@ -17,7 +17,6 @@ module mxcore_hwpe_block_quantizer
   input  logic                      clk_i,
   input  logic                      rst_ni,
   // Control
-  input  logic                      block_poison_i,
   input  logic                      quantize_mxfp8_i,
   input  logic                      quantize_bf16_i,
   // Input Data Stream
@@ -82,7 +81,6 @@ module mxcore_hwpe_block_quantizer
       ) i_quantizer (
         .clk_i             ( clk_i            ),
         .rst_ni            ( rst_ni           ),
-        .block_poison_i    ( block_poison_i   ),
         .fp32_result_i     ( quant_fp32_i[i]  ),
         .mxfp8_result_o    ( quant_mxfp8_o[i] ),
         .mx_result_scale_o ( quant_scale_o[i] )

@@ -18,9 +18,6 @@ def bin32_to_float(s32):  # "01000000101000000000000000000000" -> 5.0
     b = int(s32[-32:], 2)
     return struct.unpack('!f', struct.pack('!I', b))[0]
 
-def to_signed8(x):
-    return x - 256 if x > 127 else x
-
 def vec_to_hex(vec, vector_size=8, memory_data_width=32):
     """
     Converts a vector of binary strings into hex memory lines (padded mode).
@@ -180,11 +177,12 @@ def block_scale(block, data_type="FP8"):
         is_special = any((fp32_to_fields(x)[1] == 0xFF) for x in block)
         scaled = max_exp - (127 + emax)
         scale_emax = 127
+        scale_bias = 127
         if scaled > scale_emax:
-            return scale_emax & 0xFF, True
+            return scale_bias + scale_emax, True
         if scaled < -scale_emax:
-            return (-scale_emax) & 0xFF, is_special
-        return scaled & 0xFF, is_special
+            return scale_bias - scale_emax, is_special
+        return scale_bias + scaled, is_special
 
 def _quantize_mxfp8(fp32_val, scale, mant_bits, exp_bits, bias, exp_max, exp_min, sat_byte, nan_byte, full_field_reserved):
     sign, exp, mant = fp32_to_fields(fp32_val)
@@ -199,7 +197,7 @@ def _quantize_mxfp8(fp32_val, scale, mant_bits, exp_bits, bias, exp_max, exp_min
     is_subnorm_in = (exp == 0)
     unbiased_exp = (1 - 127) if is_subnorm_in else (exp - 127)
     full_mant = mant if is_subnorm_in else ((1 << 23) | mant)
-    scaled_exp = unbiased_exp - to_signed8(scale)
+    scaled_exp = unbiased_exp - (scale - 127)
 
     if scaled_exp > exp_max:
         return (sign << 7) | sat_byte

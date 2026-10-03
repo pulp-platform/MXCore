@@ -8,22 +8,21 @@ module mxcore_pe
   import fpnew_mxdotp_multi_pkg::*;
   import mxcore_package::*;
 #(
-  parameter int unsigned VectorBSegments  = 1,
-  parameter int unsigned AddrWidth        = (Reuse > 1) ? $clog2(Reuse) : 1
+  parameter int unsigned AddrWidth  = (Reuse > 1) ? $clog2(Reuse) : 1
 ) (
   // Global Signals
   input  logic                                      clk_i,
   input  logic                                      rst_ni,
   // Input Operands
-  input  logic [VectorSize-1:0][SRC_WIDTH-1:0]      vector_a_i,
-  input  logic [SCALE_WIDTH-1:0]                    scale_a_i,
+  input  logic [MXCoreVectorDataWidth-1:0]          vector_a_i,
+  input  logic [MXCoreScaleDataWidth-1:0]           scale_a_i,
   // Vector B Buffer
-  input  logic [LaneWidth/VectorBSegments-1:0]      vector_b_i,
-  input  logic [VectorBSegments-1:0]                vector_b_write_enable_i,
+  input  logic [MXCoreVectorDataWidth-1:0]          vector_b_i,
+  input  logic                                      vector_b_write_enable_i,
   input  logic                                      vector_b_write_addr_i,
   input  logic                                      vector_b_read_addr_i,
   // Scale B Buffer
-  input  logic [SCALE_WIDTH-1:0]                    scale_b_i,
+  input  logic [MXCoreScaleDataWidth-1:0]           scale_b_i,
   input  logic                                      scale_b_write_enable_i,
   input  logic                                      scale_b_write_addr_i,
   input  logic                                      scale_b_read_addr_i,
@@ -34,7 +33,7 @@ module mxcore_pe
   input  logic [AddrWidth-1:0]                      output_buffer_tile_addr_i,
   input  logic                                      obuff_result_ready_i,
   // Input Control Signals
-  input  fpnew_pkg::roundmode_e                    rnd_mode_i,
+  input  fpnew_pkg::roundmode_e                     rnd_mode_i,
   input  fpnew_pkg::operation_e                     op_i,
   input  logic                                      op_mod_i,
   input  fpnew_pkg::fp_format_e                     src_fmt_i,
@@ -53,39 +52,33 @@ module mxcore_pe
   output logic                                      busy_o
 );
 
-  localparam int unsigned VectorBSegmentWidth = LaneWidth / VectorBSegments;
-
-  logic [LaneWidth-1:0]           vector_b;
-  logic [SCALE_WIDTH-1:0]         scale_b;
-  logic [1:0][SCALE_WIDTH-1:0]    operands_c;
-  logic [DST_WIDTH-1:0]           operand_d;
-  logic [DST_WIDTH-1:0]           obuff_result;
-  logic [DST_WIDTH-1:0]           tile_result;
-  logic [DST_WIDTH-1:0]           mxdotp_result;
+  logic [MXCoreVectorDataWidth-1:0]       vector_b;
+  logic [MXCoreScaleDataWidth-1:0]        scale_b;
+  logic [1:0][MXCoreScaleDataWidth-1:0]   operands_c;
+  logic [DST_WIDTH-1:0]                   operand_d;
+  logic [DST_WIDTH-1:0]                   obuff_result;
+  logic [DST_WIDTH-1:0]                   tile_result;
+  logic [DST_WIDTH-1:0]                   mxdotp_result;
 
   assign operands_c = {scale_b, scale_a_i};
   assign operand_d  = obuff_result_ready_i ? obuff_result : '0;
 
-  generate
-    for (genvar s = 0; s < VectorBSegments; s++) begin : gen_vector_b_buffer
-      mxcore_register_file_1r_1w #(
-        .ADDR_WIDTH ( 1                   ),
-        .DATA_WIDTH ( VectorBSegmentWidth )
-      ) i_vector_b_buffer (
-        .clk          ( clk_i                                                     ),
-        .ReadEnable   ( 1'b1                                                      ),
-        .ReadAddr     ( vector_b_read_addr_i                                      ),
-        .ReadData     ( vector_b[s*VectorBSegmentWidth+:VectorBSegmentWidth]      ),
-        .WriteEnable  ( vector_b_write_enable_i[s]                                ),
-        .WriteAddr    ( vector_b_write_addr_i                                     ),
-        .WriteData    ( vector_b_i                                                )
-      );
-    end
-  endgenerate
+  mxcore_register_file_1r_1w #(
+    .ADDR_WIDTH ( 1                     ),
+    .DATA_WIDTH ( MXCoreVectorDataWidth )
+  ) i_vector_b_buffer (
+    .clk          ( clk_i                   ),
+    .ReadEnable   ( 1'b1                    ),
+    .ReadAddr     ( vector_b_read_addr_i    ),
+    .ReadData     ( vector_b                ),
+    .WriteEnable  ( vector_b_write_enable_i ),
+    .WriteAddr    ( vector_b_write_addr_i   ),
+    .WriteData    ( vector_b_i              )
+  );
 
   mxcore_register_file_1r_1w #(
-    .ADDR_WIDTH ( 1           ),
-    .DATA_WIDTH ( SCALE_WIDTH )
+    .ADDR_WIDTH ( 1                     ),
+    .DATA_WIDTH ( MXCoreScaleDataWidth  )
   ) i_scale_b_buffer (
     .clk          ( clk_i                   ),
     .ReadEnable   ( 1'b1                    ),

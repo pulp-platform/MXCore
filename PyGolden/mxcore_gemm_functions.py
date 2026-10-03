@@ -15,7 +15,7 @@ from .globals import get_constants
 
 MEMORY_EXPORT = True
 
-def mxcore_gemm(fp9_matrix_a, fp9_matrix_b, scale_matrix_a, scale_matrix_b, hardware_vector_size=8, vector_size=8, num_compute_units=8, num_out_buffers=4, data_type="FP8", acc_data_type="FP32", BLOCK_SIZE=32, result_mx_block_size=None, memory_data_width=32, mem_file=None, res_file=None, res_mx_file=None, header_path=None, allow_fp9_special_values=False, set_max_fp9=False, set_min_fp9=False, scale_range=[-127, 128], is_fp32_subnormal=False, force_fp32=False, exponent_range_fp32=[-127, 128], force_output_zero=False, use_external_data=False, dataflow_file=None, mem_debug_file=None, preload_matrix=None, block_poison_enable=False):
+def mxcore_gemm(fp9_matrix_a, fp9_matrix_b, scale_matrix_a, scale_matrix_b, hardware_vector_size=8, vector_size=8, num_compute_units=8, num_out_buffers=4, data_type="FP8", acc_data_type="FP32", BLOCK_SIZE=32, result_mx_block_size=None, memory_data_width=32, mem_file=None, res_file=None, res_mx_file=None, header_path=None, allow_fp9_special_values=False, set_max_fp9=False, set_min_fp9=False, scale_range=[-127, 128], is_fp32_subnormal=False, force_fp32=False, exponent_range_fp32=[-127, 128], force_output_zero=False, use_external_data=False, dataflow_file=None, mem_debug_file=None, preload_matrix=None):
     """
     Compute the vector-matrix multiplication of FP9 values
 
@@ -135,7 +135,6 @@ def mxcore_gemm(fp9_matrix_a, fp9_matrix_b, scale_matrix_a, scale_matrix_b, hard
             res_file=res_file,
             res_mx_file=res_mx_file,
             mem_debug_file=mem_debug_file,
-            block_poison_enable=block_poison_enable,
         )
         write_to_c_header(
             fp9_matrix_a=fp9_matrix_a,
@@ -153,7 +152,6 @@ def mxcore_gemm(fp9_matrix_a, fp9_matrix_b, scale_matrix_a, scale_matrix_b, hard
             result_mx_block_size=result_mx_block_size,
             memory_data_width=memory_data_width,
             header_path=header_path,
-            block_poison_enable=block_poison_enable,
         )
 
     if dataflow_file is not None:
@@ -170,7 +168,7 @@ def mxcore_gemm(fp9_matrix_a, fp9_matrix_b, scale_matrix_a, scale_matrix_b, hard
         )
 
 
-def write_to_memory_file(fp9_matrix_a, fp9_matrix_b, scale_matrix_a, scale_matrix_b, result_matrix, preload_matrix=None, data_type="FP8", acc_data_type="FP32", vector_size=8, num_compute_units=8, num_out_buffers=4, memory_data_width=32, BLOCK_SIZE=32, result_mx_block_size=None, mem_file=None, res_file=None, res_mx_file=None, mem_debug_file=None, block_poison_enable=False):
+def write_to_memory_file(fp9_matrix_a, fp9_matrix_b, scale_matrix_a, scale_matrix_b, result_matrix, preload_matrix=None, data_type="FP8", acc_data_type="FP32", vector_size=8, num_compute_units=8, num_out_buffers=4, memory_data_width=32, BLOCK_SIZE=32, result_mx_block_size=None, mem_file=None, res_file=None, res_mx_file=None, mem_debug_file=None):
     mdim = len(fp9_matrix_a)
     kdim = len(fp9_matrix_a[0])
     ndim = len(fp9_matrix_b[0])
@@ -307,7 +305,7 @@ def write_to_memory_file(fp9_matrix_a, fp9_matrix_b, scale_matrix_a, scale_matri
                     scale, poisoned = block_scale(block_fp32, data_type="FP8ALT" if data_type == "FP8ALT" else "FP8")
                     quantize_fn = quantize_e5m2 if data_type != "FP8ALT" else quantize_e4m3
                     nan_byte = 0x7D if data_type != "FP8ALT" else 0x7F
-                    if poisoned and block_poison_enable:
+                    if poisoned:
                         quantized_all = [nan_byte] * len(block_fp32)
                     else:
                         quantized_all = [quantize_fn(v, scale) for v in block_fp32]
@@ -402,7 +400,7 @@ def write_to_memory_file(fp9_matrix_a, fp9_matrix_b, scale_matrix_a, scale_matri
             mem_debug_file=mem_debug_file,
         )
 
-def write_to_c_header(fp9_matrix_a, fp9_matrix_b, scale_matrix_a, scale_matrix_b, result_matrix, preload_matrix=None, data_type="FP8", acc_data_type="FP32", vector_size=8, num_compute_units=8, num_out_buffers=4, BLOCK_SIZE=32, result_mx_block_size=None, memory_data_width=32, header_path=None, block_poison_enable=False):
+def write_to_c_header(fp9_matrix_a, fp9_matrix_b, scale_matrix_a, scale_matrix_b, result_matrix, preload_matrix=None, data_type="FP8", acc_data_type="FP32", vector_size=8, num_compute_units=8, num_out_buffers=4, BLOCK_SIZE=32, result_mx_block_size=None, memory_data_width=32, header_path=None):
     mdim      = len(fp9_matrix_a)
     kdim      = len(fp9_matrix_a[0])
     ndim      = len(fp9_matrix_b[0])
@@ -501,7 +499,7 @@ def write_to_c_header(fp9_matrix_a, fp9_matrix_b, scale_matrix_a, scale_matrix_b
                     result_scale_mx.append(scale)
                     quantize_fn = quantize_e5m2 if data_type != "FP8ALT" else quantize_e4m3
                     nan_byte = 0x7D if data_type != "FP8ALT" else 0x7F
-                    if poisoned and block_poison_enable:
+                    if poisoned:
                         quantized_all = [nan_byte] * len(block_fp32)
                     else:
                         quantized_all = [quantize_fn(v, scale) for v in block_fp32]

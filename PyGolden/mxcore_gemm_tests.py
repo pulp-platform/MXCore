@@ -11,7 +11,7 @@ from .mxcore_gemm_functions import *
 from .random_tests import *
 from .globals import get_constants
 
-def test_mxcore_gemm(data_type="FP8", acc_data_type="FP32", hardware_vector_size=8, vector_size=8, mdim=256, kdim=1024, ndim=256, num_compute_units=8, num_out_buffers=4, BLOCK_SIZE=32, result_mx_block_size=None, seed=None, memory_data_width=32, mem_file=None, res_file=None, res_mx_file=None, header_path=None, allow_fp9_special_values=False, set_max_fp9=False, set_min_fp9=False, scale_range=[-127, 128], is_fp32_subnormal=False, force_fp32=False, exponent_range_fp32=[-127, 128], force_output_zero=False, use_external_data=False, dataflow_file=None, mem_debug_file=None, preload=False, block_poison_enable=False):
+def test_mxcore_gemm(data_type="FP8", acc_data_type="FP32", hardware_vector_size=8, vector_size=8, mdim=256, kdim=1024, ndim=256, num_compute_units=8, num_out_buffers=4, BLOCK_SIZE=32, result_mx_block_size=None, seed=None, memory_data_width=32, mem_file=None, res_file=None, res_mx_file=None, header_path=None, allow_fp9_special_values=False, set_max_fp9=False, set_min_fp9=False, scale_range=[-127, 128], is_fp32_subnormal=False, force_fp32=False, exponent_range_fp32=[-127, 128], force_output_zero=False, use_external_data=False, dataflow_file=None, mem_debug_file=None, preload=False):
     """
     Test the mxcore_gemm function with two MX FP9 matrices
 
@@ -50,9 +50,9 @@ def test_mxcore_gemm(data_type="FP8", acc_data_type="FP32", hardware_vector_size
         print(f"Preload: {mdim} x {ndim} FP32 accumulator matrix generated")
 
     # Test the mxcore_gemm function with the generated vectors
-    mxcore_gemm(random_fp9_matrix_a, random_fp9_matrix_b, scale_matrix_a, scale_matrix_b, hardware_vector_size=hardware_vector_size, vector_size=vector_size, num_compute_units=num_compute_units, num_out_buffers=num_out_buffers, BLOCK_SIZE=BLOCK_SIZE, result_mx_block_size=result_mx_block_size, data_type=data_type, acc_data_type=acc_data_type, memory_data_width=memory_data_width, mem_file=mem_file, res_file=res_file, res_mx_file=res_mx_file, header_path=header_path, allow_fp9_special_values=allow_fp9_special_values, set_max_fp9=set_max_fp9, set_min_fp9=set_min_fp9, scale_range=scale_range, is_fp32_subnormal=is_fp32_subnormal, force_fp32=force_fp32, exponent_range_fp32=exponent_range_fp32, force_output_zero=force_output_zero, use_external_data=use_external_data, dataflow_file=dataflow_file, mem_debug_file=mem_debug_file, preload_matrix=preload_matrix, block_poison_enable=block_poison_enable)
+    mxcore_gemm(random_fp9_matrix_a, random_fp9_matrix_b, scale_matrix_a, scale_matrix_b, hardware_vector_size=hardware_vector_size, vector_size=vector_size, num_compute_units=num_compute_units, num_out_buffers=num_out_buffers, BLOCK_SIZE=BLOCK_SIZE, result_mx_block_size=result_mx_block_size, data_type=data_type, acc_data_type=acc_data_type, memory_data_width=memory_data_width, mem_file=mem_file, res_file=res_file, res_mx_file=res_mx_file, header_path=header_path, allow_fp9_special_values=allow_fp9_special_values, set_max_fp9=set_max_fp9, set_min_fp9=set_min_fp9, scale_range=scale_range, is_fp32_subnormal=is_fp32_subnormal, force_fp32=force_fp32, exponent_range_fp32=exponent_range_fp32, force_output_zero=force_output_zero, use_external_data=use_external_data, dataflow_file=dataflow_file, mem_debug_file=mem_debug_file, preload_matrix=preload_matrix)
 
-def run_mxcore_gemm(data_type="FP8", acc_data_type="FP32", seed=None, hardware_vector_size=8, vector_size=8, mdim=256, kdim=1024, ndim=256, num_compute_units=8, num_out_buffers=4, BLOCK_SIZE=32, result_mx_block_size=None, memory_data_width=32, mem_file=None, res_file=None, res_mx_file=None, header_path=None, allow_fp9_special_values=False, set_max_fp9=False, set_min_fp9=False, scale_range=[-127, 128], is_fp32_subnormal=False, force_fp32=False, exponent_range_fp32=[-127, 128], force_output_zero=False, use_external_data=False, dataflow_file=None, mem_debug_file=None, preload=False, block_poison_enable=False):
+def run_mxcore_gemm(data_type="FP8", acc_data_type="FP32", seed=None, hardware_vector_size=8, vector_size=8, mdim=256, kdim=1024, ndim=256, num_compute_units=8, num_out_buffers=4, BLOCK_SIZE=32, result_mx_block_size=None, memory_data_width=32, mem_file=None, res_file=None, res_mx_file=None, header_path=None, allow_fp9_special_values=False, set_max_fp9=False, set_min_fp9=False, scale_range=[-127, 128], is_fp32_subnormal=False, force_fp32=False, exponent_range_fp32=[-127, 128], force_output_zero=False, use_external_data=False, dataflow_file=None, mem_debug_file=None, preload=False):
     """
     Run the test_mxcore_gemm function
 
@@ -95,8 +95,7 @@ def run_mxcore_gemm(data_type="FP8", acc_data_type="FP32", seed=None, hardware_v
                          use_external_data=use_external_data,
                          dataflow_file=dataflow_file,
                          mem_debug_file=mem_debug_file,
-                         preload=preload,
-                         block_poison_enable=block_poison_enable)
+                         preload=preload)
     except Exception as e:
         print("Error Encountered!")
         print(f"Exception: {e}")

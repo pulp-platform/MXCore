@@ -10,20 +10,18 @@ module mxcore_pe_array
 #(
   parameter int unsigned InputDataWidth       = 512,
   // Do not change the following parameters
-  parameter int unsigned VectorBSegments      = (LaneWidth > InputDataWidth) ? (LaneWidth / InputDataWidth) : 1,
-  parameter int unsigned VectorsBDataWidth    = (NPE*LaneWidth < InputDataWidth) ? (NPE*LaneWidth) : InputDataWidth,
-  parameter int unsigned ScaleBDataWidth      = (NPE*SCALE_WIDTH < InputDataWidth) ? (NPE*SCALE_WIDTH) : InputDataWidth,
+  parameter int unsigned ScaleBDataWidth      = (NPE*MXCoreScaleDataWidth < InputDataWidth) ? (NPE*MXCoreScaleDataWidth) : InputDataWidth,
   parameter int unsigned AddrWidth            = (Reuse > 1) ? $clog2(Reuse) : 1
 ) (
   // Global Signals
   input  logic                                      clk_i,
   input  logic                                      rst_ni,
   // Input Operands
-  input  logic [VectorSize-1:0][SRC_WIDTH-1:0]      vector_a_i,
-  input  logic [SCALE_WIDTH-1:0]                    scale_a_i,
+  input  logic [MXCoreVectorDataWidth-1:0]          vector_a_i,
+  input  logic [MXCoreScaleDataWidth-1:0]           scale_a_i,
   // Vector B Buffers
-  input  logic [VectorsBDataWidth-1:0]              vectors_b_i,
-  input  logic [NPE*VectorBSegments-1:0]            vector_b_write_enable_i,
+  input  logic [InputDataWidth-1:0]                 vectors_b_i,
+  input  logic [NPE-1:0]                            vector_b_write_enable_i,
   input  logic                                      vector_b_write_addr_i,
   input  logic                                      vector_b_read_addr_i,
   // Scale B Buffers
@@ -57,9 +55,8 @@ module mxcore_pe_array
   output logic                                      busy_o
 );
 
-  localparam int unsigned VectorBSegmentWidth   = LaneWidth / VectorBSegments;
-  localparam int unsigned VectorBUnitsPerWrite  = VectorsBDataWidth / VectorBSegmentWidth;
-  localparam int unsigned ScaleBUnitsPerWrite   = ScaleBDataWidth / SCALE_WIDTH;
+  localparam int unsigned VectorBUnitsPerWrite  = InputDataWidth / MXCoreVectorDataWidth;
+  localparam int unsigned ScaleBUnitsPerWrite   = ScaleBDataWidth / MXCoreScaleDataWidth;
 
   logic [NPE-1:0]                 pe_in_ready;
   logic [NPE-1:0]                 pe_out_valid;
@@ -69,39 +66,38 @@ module mxcore_pe_array
   generate
     for (genvar p = 0; p < NPE; p++) begin : gen_pe
       mxcore_pe #(
-        .VectorBSegments  ( VectorBSegments ),
-        .AddrWidth        ( AddrWidth       )
+        .AddrWidth  ( AddrWidth )
       ) i_pe (
-        .clk_i                        ( clk_i                                                                                         ),
-        .rst_ni                       ( rst_ni                                                                                        ),
-        .vector_a_i                   ( vector_a_i                                                                                    ),
-        .scale_a_i                    ( scale_a_i                                                                                     ),
-        .vector_b_i                   ( vectors_b_i[((p*VectorBSegments)%VectorBUnitsPerWrite)*VectorBSegmentWidth+:VectorBSegmentWidth] ),
-        .vector_b_write_enable_i      ( vector_b_write_enable_i[p*VectorBSegments+:VectorBSegments]                                   ),
-        .vector_b_write_addr_i        ( vector_b_write_addr_i                                                                         ),
-        .vector_b_read_addr_i         ( vector_b_read_addr_i                                                                          ),
-        .scale_b_i                    ( scale_b_i[(p%ScaleBUnitsPerWrite)*SCALE_WIDTH+:SCALE_WIDTH]                                   ),
-        .scale_b_write_enable_i       ( scale_b_write_enable_i[p]                                                                     ),
-        .scale_b_write_addr_i         ( scale_b_write_addr_i                                                                          ),
-        .scale_b_read_addr_i          ( scale_b_read_addr_i                                                                           ),
-        .output_buffer_write_enable_i ( output_buffer_write_enable_i                                                                  ),
-        .output_buffer_write_addr_i   ( output_buffer_write_addr_i                                                                    ),
-        .output_buffer_read_addr_i    ( output_buffer_read_addr_i                                                                     ),
-        .output_buffer_tile_addr_i    ( output_buffer_tile_addr_i                                                                     ),
-        .obuff_result_ready_i         ( obuff_result_ready_i                                                                          ),
-        .rnd_mode_i                   ( rnd_mode_i                                                                                    ),
-        .op_i                         ( op_i                                                                                          ),
-        .op_mod_i                     ( op_mod_i                                                                                      ),
-        .src_fmt_i                    ( src_fmt_i                                                                                     ),
-        .int_fmt_i                    ( int_fmt_i                                                                                     ),
-        .dst_fmt_i                    ( dst_fmt_i                                                                                     ),
-        .in_valid_i                   ( in_valid_i                                                                                    ),
-        .in_ready_o                   ( pe_in_ready[p]                                                                                ),
-        .flush_i                      ( flush_i                                                                                       ),
-        .tile_result_o                ( tile_result[p]                                                                                ),
-        .out_valid_o                  ( pe_out_valid[p]                                                                               ),
-        .out_ready_i                  ( out_ready_i                                                                                   ),
-        .busy_o                       ( pe_busy[p]                                                                                    )
+        .clk_i                        ( clk_i                                                                              ),
+        .rst_ni                       ( rst_ni                                                                             ),
+        .vector_a_i                   ( vector_a_i                                                                         ),
+        .scale_a_i                    ( scale_a_i                                                                          ),
+        .vector_b_i                   ( vectors_b_i[(p%VectorBUnitsPerWrite)*MXCoreVectorDataWidth+:MXCoreVectorDataWidth] ),
+        .vector_b_write_enable_i      ( vector_b_write_enable_i[p]                                                         ),
+        .vector_b_write_addr_i        ( vector_b_write_addr_i                                                              ),
+        .vector_b_read_addr_i         ( vector_b_read_addr_i                                                               ),
+        .scale_b_i                    ( scale_b_i[(p%ScaleBUnitsPerWrite)*MXCoreScaleDataWidth+:MXCoreScaleDataWidth]      ),
+        .scale_b_write_enable_i       ( scale_b_write_enable_i[p]                                                          ),
+        .scale_b_write_addr_i         ( scale_b_write_addr_i                                                               ),
+        .scale_b_read_addr_i          ( scale_b_read_addr_i                                                                ),
+        .output_buffer_write_enable_i ( output_buffer_write_enable_i                                                       ),
+        .output_buffer_write_addr_i   ( output_buffer_write_addr_i                                                         ),
+        .output_buffer_read_addr_i    ( output_buffer_read_addr_i                                                          ),
+        .output_buffer_tile_addr_i    ( output_buffer_tile_addr_i                                                          ),
+        .obuff_result_ready_i         ( obuff_result_ready_i                                                               ),
+        .rnd_mode_i                   ( rnd_mode_i                                                                         ),
+        .op_i                         ( op_i                                                                               ),
+        .op_mod_i                     ( op_mod_i                                                                           ),
+        .src_fmt_i                    ( src_fmt_i                                                                          ),
+        .int_fmt_i                    ( int_fmt_i                                                                          ),
+        .dst_fmt_i                    ( dst_fmt_i                                                                          ),
+        .in_valid_i                   ( in_valid_i                                                                         ),
+        .in_ready_o                   ( pe_in_ready[p]                                                                     ),
+        .flush_i                      ( flush_i                                                                            ),
+        .tile_result_o                ( tile_result[p]                                                                     ),
+        .out_valid_o                  ( pe_out_valid[p]                                                                    ),
+        .out_ready_i                  ( out_ready_i                                                                        ),
+        .busy_o                       ( pe_busy[p]                                                                         )
       );
     end
   endgenerate

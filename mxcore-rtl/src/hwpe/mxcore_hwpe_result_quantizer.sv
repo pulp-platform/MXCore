@@ -15,8 +15,6 @@ module mxcore_hwpe_result_quantizer #(
   // Global Signals
   input  logic                      clk_i,
   input  logic                      rst_ni,
-  // Control
-  input  logic                      block_poison_i,
   // Input Data Stream
   hwpe_stream_intf_stream.sink      fp32_result_i,
   // Output Data Stream
@@ -66,7 +64,7 @@ module mxcore_hwpe_result_quantizer #(
         .fp32_i   ( fp32_data[i]  ),
         .mxfp8_o  ( mxfp8_data[i] )
       );
-      assign mxfp8_block[i*8+:8] = (block_poison && block_poison_i) ? MXFP8_NAN : mxfp8_data[i];
+      assign mxfp8_block[i*8+:8] = block_poison ? MXFP8_NAN : mxfp8_data[i];
     end
   endgenerate
 

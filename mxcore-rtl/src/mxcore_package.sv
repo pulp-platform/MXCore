@@ -20,6 +20,10 @@ package mxcore_package;
   parameter int unsigned             NumOperands   = 2*VectorSize+1;
   parameter int unsigned             LaneWidth     = VectorSize*SRC_WIDTH;
 
+  // Vector/Scale Datawidths
+  parameter int unsigned MXCoreVectorDataWidth    = VectorSize*SRC_WIDTH;
+  parameter int unsigned MXCoreScaleDataWidth     = SCALE_WIDTH;
+
   // Microscaling (MX) Parameters
   parameter int unsigned BlockSize                = 32;
   parameter int unsigned MXFP8BlockSize           = BlockSize * SRC_WIDTH;
