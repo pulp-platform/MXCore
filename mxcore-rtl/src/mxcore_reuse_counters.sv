@@ -15,7 +15,7 @@ module mxcore_reuse_counters
   input  logic          rst_ni,
   input  logic          clear_i,
   // Per-Output-Tile Input Reuse Count
-  input  logic [15:0]   ireuse_i,
+  input  logic [15:0]   iter_count_i,
   // Count Enable Signals
   input  logic          count_in_i,
   input  logic          count_out_i,
@@ -33,11 +33,11 @@ module mxcore_reuse_counters
     out_count_d = out_count_q;
     // Input Reuse Count
     if (count_in_i) begin
-      in_count_d = (in_count_q == ireuse_i - 1) ? '0 : in_count_q + 1;
+      in_count_d = (in_count_q == iter_count_i - 1) ? '0 : in_count_q + 1;
     end
     // Output Reuse Count
     if (count_out_i) begin
-      out_count_d = (out_count_q == ireuse_i - 1) ? '0 : out_count_q + 1;
+      out_count_d = (out_count_q == iter_count_i - 1) ? '0 : out_count_q + 1;
     end
   end
 
@@ -46,15 +46,15 @@ module mxcore_reuse_counters
 
 `ifdef DATAFLOW_TRACE
   always_ff @(posedge clk_i) begin
-    if (rst_ni && count_in_i) $display("DF %0.3f COMPUTE %0d %0d", $realtime/1ns, in_count_q, ireuse_i); // Debug Display
+    if (rst_ni && count_in_i) $display("DF %0.3f COMPUTE %0d %0d", $realtime/1ns, in_count_q, iter_count_i); // Debug Display
   end
 `endif
 
   // First iteration: No Partial Results
   assign first_iter_o = (in_count_q < Reuse);
   // Last iteration: Final Tile Results
-  assign last_iter_o  = (out_count_q + Reuse >= ireuse_i);
+  assign last_iter_o  = (out_count_q + Reuse >= iter_count_i);
   // End of Tile: Last Result of the Tile
-  assign tile_end_o   = count_out_i && (out_count_q == ireuse_i - 1);
+  assign tile_end_o   = count_out_i && (out_count_q == iter_count_i - 1);
 
 endmodule : mxcore_reuse_counters

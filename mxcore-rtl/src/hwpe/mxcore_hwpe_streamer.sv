@@ -53,12 +53,12 @@ module mxcore_hwpe_streamer
     EW:     DEFAULT_EW,
     EHW:    DEFAULT_EHW
   };
-  `HCI_INTF_EXPLICIT_PARAM(tcdm_vector_a, clk_i, HCI_SIZE_tcdm_dw);
-  `HCI_INTF_EXPLICIT_PARAM(tcdm_vectors_b, clk_i, HCI_SIZE_tcdm_dw);
-  `HCI_INTF_EXPLICIT_PARAM(tcdm_scale_a, clk_i, HCI_SIZE_tcdm_dw);
-  `HCI_INTF_EXPLICIT_PARAM(tcdm_scale_b, clk_i, HCI_SIZE_tcdm_dw);
+  `HCI_INTF_EXPLICIT_PARAM(tcdm_vector_a,     clk_i, HCI_SIZE_tcdm_dw);
+  `HCI_INTF_EXPLICIT_PARAM(tcdm_vectors_b,    clk_i, HCI_SIZE_tcdm_dw);
+  `HCI_INTF_EXPLICIT_PARAM(tcdm_scale_a,      clk_i, HCI_SIZE_tcdm_dw);
+  `HCI_INTF_EXPLICIT_PARAM(tcdm_scale_b,      clk_i, HCI_SIZE_tcdm_dw);
   `HCI_INTF_EXPLICIT_PARAM(tcdm_preload_bias, clk_i, HCI_SIZE_tcdm_dw);
-  `HCI_INTF_EXPLICIT_PARAM(tcdm_result, clk_i, HCI_SIZE_tcdm_dw);
+  `HCI_INTF_EXPLICIT_PARAM(tcdm_result,       clk_i, HCI_SIZE_tcdm_dw);
 
   localparam hci_size_parameter_t `HCI_SIZE_PARAM(virt_tcdm) = '{
     DW:     MXCoreTCDMDataWidth,

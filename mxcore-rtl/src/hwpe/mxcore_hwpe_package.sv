@@ -16,10 +16,6 @@ package mxcore_hwpe_package;
   parameter int unsigned MXCoreIoRegs           = 16;
 
   // Input/Output Datawidths
-  parameter int unsigned MXCoreVectorADataWidth       = VectorSize*SRC_WIDTH;
-  parameter int unsigned MXCoreVectorsBDataWidth      = NPE*VectorSize*SRC_WIDTH;
-  parameter int unsigned MXCoreScaleADataWidth        = SCALE_WIDTH;
-  parameter int unsigned MXCoreScaleBDataWidth        = NPE*SCALE_WIDTH;
   parameter int unsigned MXCoreEngineResultDataWidth  = NPE*DST_WIDTH;
   parameter int unsigned MXCoreQuantResultDataWidth   = NPE*SRC_WIDTH;
   parameter int unsigned MXCoreBF16ResultDataWidth    = NPE*16;
@@ -80,11 +76,6 @@ package mxcore_hwpe_package;
   } ctrl_output_t;
 
   typedef struct packed {
-    fpnew_pkg::status_t [NPE-1:0] status;
-    logic               [NPE-1:0] extension_bit;
-    logic                         tag;
-    logic                         mask;
-    logic                         aux;
     logic                         busy;
     logic                         preload_ready;
     logic                         tile_end;

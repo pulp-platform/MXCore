@@ -28,7 +28,7 @@ module mxcore_hwpe_fifo_buffer #(
     .clk ( clk_i    )
   );
 
-  localparam int unsigned ReuseFactor  = InputDataWidth / OutputDataWidth;
+  localparam int unsigned ReuseFactor = InputDataWidth / OutputDataWidth;
 
   logic [$clog2(ReuseFactor)-1:0]  reuse_cnt_d, reuse_cnt_q;
 
@@ -50,10 +50,10 @@ module mxcore_hwpe_fifo_buffer #(
   `FFARNC(reuse_cnt_q, reuse_cnt_d, clear_i, '0)
 
   hwpe_stream_fifo #(
-    .DATA_WIDTH (InputDataWidth),
-    .FIFO_DEPTH (FifoDepth),
-    .LATCH_FIFO (LatchFifo),
-    .LATCH_FIFO_TEST_WRAP (LatchFifoTestWrap)
+    .DATA_WIDTH           ( InputDataWidth    ),
+    .FIFO_DEPTH           ( FifoDepth         ),
+    .LATCH_FIFO           ( LatchFifo         ),
+    .LATCH_FIFO_TEST_WRAP ( LatchFifoTestWrap )
   ) i_data_fifo (
     .clk_i      ( clk_i     ),
     .rst_ni     ( rst_ni    ),
