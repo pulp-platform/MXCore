@@ -84,7 +84,7 @@ module fp32_to_mxfp8_quantizer #(
     end else begin
       unbiased_exponent = is_input_subnorm ? (1 - FP32_BIAS) : (fp32_exponent - FP32_BIAS);
       full_mantissa     = is_input_subnorm ? {1'b0, fp32_mantissa} : {1'b1, fp32_mantissa};
-      scaled_exponent   = unbiased_exponent - $signed(scale_i);
+      scaled_exponent   = unbiased_exponent - ($signed({2'b00, scale_i}) - FP32_BIAS);
       // Overflow
       if (scaled_exponent > EXPONENT_MAX) begin
         mxfp8_exponent  = (Encoding == 0) ? ((Saturate == 1) ? 5'h1e : 5'h1f) : 4'hf;

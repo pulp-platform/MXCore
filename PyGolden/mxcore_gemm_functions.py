@@ -309,6 +309,7 @@ def write_to_memory_file(fp9_matrix_a, fp9_matrix_b, scale_matrix_a, scale_matri
                     nan_byte = 0x7D if data_type != "FP8ALT" else 0x7F
                     if poisoned and block_poison_enable:
                         quantized_all = [nan_byte] * len(block_fp32)
+                        scale = 0xFF
                     else:
                         quantized_all = [quantize_fn(v, scale) for v in block_fp32]
                     mx_row_segments.append((quantized_all[:q_cols], scale))
@@ -498,14 +499,15 @@ def write_to_c_header(fp9_matrix_a, fp9_matrix_b, scale_matrix_a, scale_matrix_b
                     segment = [_acc_to_fp32_u32(result_matrix[row_idx][col_start + q_start + j]) for j in range(q_cols)]
                     block_fp32 = segment + [0] * (result_mx_block_size - q_cols)
                     scale, poisoned = block_scale(block_fp32, data_type="FP8ALT" if data_type == "FP8ALT" else "FP8")
-                    result_scale_mx.append(scale)
                     quantize_fn = quantize_e5m2 if data_type != "FP8ALT" else quantize_e4m3
                     nan_byte = 0x7D if data_type != "FP8ALT" else 0x7F
                     if poisoned and block_poison_enable:
                         quantized_all = [nan_byte] * len(block_fp32)
+                        scale = 0xFF
                     else:
                         quantized_all = [quantize_fn(v, scale) for v in block_fp32]
                     result_mx_all.extend(quantized_all[:q_cols])
+                    result_scale_mx.append(scale)
 
     # Pack bytes into memory_data_width words
     bytes_per_word = memory_data_width // 8

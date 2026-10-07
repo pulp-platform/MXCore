@@ -19,12 +19,9 @@ module block_scale #(
   output logic                        block_poison_o
 );
 
-  localparam int FP32_BIAS  = 127;
   localparam int E5M2_EMAX  = 15;
   localparam int E4M3_EMAX  = 8;
   localparam int MXFP8_EMAX = (Encoding == 0) ? E5M2_EMAX : E4M3_EMAX;
-
-  localparam int SCALE_EMAX = (2 ** (ScaleWidth-1)) - 1;
 
   // Number of Levels/Stages in the Comparator Tree
   localparam int STAGES     = $clog2(BlockSize);
@@ -41,8 +38,6 @@ module block_scale #(
 
   // Scaled Exponent
   logic signed [9:0]  scaled_exponent;
-  logic               scale_overflow;
-  logic               scale_underflow;
 
   // Comparator Tree Stages
   logic [STAGES:0][BlockSize-1:0][7:0]  stage;
@@ -71,14 +66,10 @@ module block_scale #(
   endgenerate
   assign max_exponent = stage[STAGES][0];
 
-  assign scaled_exponent  = $signed({2'b00, max_exponent}) - FP32_BIAS - MXFP8_EMAX;
-  assign scale_overflow   = scaled_exponent > SCALE_EMAX;
-  assign scale_underflow  = scaled_exponent < -SCALE_EMAX;
+  // OCP E8M0 Scale (Bias 127)
+  assign scaled_exponent  = $signed({2'b00, max_exponent}) - MXFP8_EMAX;
+  assign block_scale_o    = (scaled_exponent < 0) ? '0 : scaled_exponent[ScaleWidth-1:0];
 
-  assign block_scale_o    = scale_overflow  ? ScaleWidth'(SCALE_EMAX) :
-                             scale_underflow ? ScaleWidth'(-SCALE_EMAX) :
-                             scaled_exponent[ScaleWidth-1:0];
-
-  assign block_poison_o   = scale_overflow || (|is_special);
+  assign block_poison_o   = |is_special;
 
 endmodule : block_scale

@@ -77,7 +77,7 @@ module mxcore_hwpe_result_quantizer #(
   assign mxfp8_result_o.strb  = {(OutputDataWidth/8){1'b1}};
 
   assign mx_result_scale_o.valid = fp32_result_i.valid;
-  assign mx_result_scale_o.data  = block_scale;
+  assign mx_result_scale_o.data  = (block_poison && block_poison_i) ? '1 : block_scale;
   assign mx_result_scale_o.strb  = {ScaleWidth/8{1'b1}};
 
 endmodule : mxcore_hwpe_result_quantizer
