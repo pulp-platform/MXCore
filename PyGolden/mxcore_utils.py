@@ -175,7 +175,6 @@ def block_scale(block, data_type="FP8"):
         emax = 15 if data_type == "FP8" else 8
         max_exp = max([(fp32_to_fields(x)[1]) for x in block])
         is_special = any((fp32_to_fields(x)[1] == 0xFF) for x in block)
-        # OCP E8M0 scale (bias 127)
         return max(max_exp - emax, 0), is_special
 
 def _quantize_mxfp8(fp32_val, scale, mant_bits, exp_bits, bias, exp_max, exp_min, sat_byte, nan_byte, full_field_reserved):
