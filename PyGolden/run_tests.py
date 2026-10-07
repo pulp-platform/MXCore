@@ -51,7 +51,7 @@ TILE_COLOURS = {
 REPO_ROOT   = Path(__file__).resolve().parent.parent
 ROOT        = REPO_ROOT / "mxcore-rtl"
 SIM_DIR     = ROOT / "sim"
-TV_DIR      = REPO_ROOT / "testvectors" / "nopreload"
+TV_ROOT     = REPO_ROOT / "testvectors"
 TEST_DIR    = REPO_ROOT / "work" / "regression"
 WORK_BASE   = TEST_DIR / "workdirs"
 QUESTA      = "questa-2023.4"
@@ -143,6 +143,10 @@ def workload_tag(M, K, N):
     return f"{C_GREEN}small{C_RESET}"
 
 
+def _tv_dir(preload):
+    return TV_ROOT / ("preload" if preload else "nopreload")
+
+
 def _shape_tag(t, defaults):
     return (f"{t['data_type']}_VS{t['vector_size']}_MX{t['npe']}_O{t['reuse']}"
             f"_M{t['M']}_K{t['K']}_N{t['N']}_BS{defaults['block_size']}")
@@ -151,19 +155,20 @@ def _shape_tag(t, defaults):
 # ── Test-vector generation (golden model) ────────────────────────────────────
 def generate_testvectors(tests, defaults):
     """Generate any missing memory/result files for the given tests via PyGolden."""
-    shapes = {(t["data_type"], t["vector_size"], t["npe"], t["reuse"], t["M"], t["K"], t["N"]) for t in tests}
+    shapes = {(t["data_type"], t["vector_size"], t["npe"], t["reuse"], t["M"], t["K"], t["N"], t.get("preload", 0)) for t in tests}
     mxcore_gemm_functions.MEMORY_EXPORT = True
-    for data_type, vs, npe, reuse, M, K, N in sorted(shapes):
+    for data_type, vs, npe, reuse, M, K, N, preload in sorted(shapes):
         tag = f"{data_type}_VS{vs}_MX{npe}_O{reuse}_M{M}_K{K}_N{N}_BS{defaults['block_size']}"
-        mem_file = TV_DIR / "memory" / f"data_memory_{tag}.txt"
-        res_file = TV_DIR / "result" / f"result_{tag}.txt"
-        res_mx_file = TV_DIR / "result_mx" / f"result_{tag}.txt"
-        res_bf16_file = TV_DIR / "result_bf16" / f"result_{tag}.txt"
+        tv_dir = _tv_dir(preload)
+        mem_file = tv_dir / "memory" / f"data_memory_{tag}.txt"
+        res_file = tv_dir / "result" / f"result_{tag}.txt"
+        res_mx_file = tv_dir / "result_mx" / f"result_{tag}.txt"
+        res_bf16_file = tv_dir / "result_bf16" / f"result_{tag}.txt"
         if mem_file.exists() and res_file.exists() and res_mx_file.exists() and res_bf16_file.exists():
             continue
-        print(f"{C_DIM}Generating test vectors for {data_type} (VS,NPE,Reuse)=({vs},{npe},{reuse}) (M,K,N)=({M},{K},{N})...{C_RESET}", file=sys.stderr)
+        print(f"{C_DIM}Generating {'preload ' if preload else ''}test vectors for {data_type} (VS,NPE,Reuse)=({vs},{npe},{reuse}) (M,K,N)=({M},{K},{N})...{C_RESET}", file=sys.stderr)
         gemm_mxcore_vector_gen(
-            folder_path=str(REPO_ROOT / "testvectors"),
+            folder_path=str(TV_ROOT),
             data_type=data_type,
             seed=MAIN_SEED,
             fp9_scale_range=[-63, 63],
@@ -172,7 +177,7 @@ def generate_testvectors(tests, defaults):
             num_mx_units=npe,
             num_out_buffers=reuse,
             block_size=defaults["block_size"],
-            preload=False,
+            preload=bool(preload),
         )
 
 
@@ -182,15 +187,17 @@ def generate_compile_tcl(cfg, defaults, workdir):
     quantize_bf16 = cfg.get("quantize_bf16", 0)
     vs, npe, reuse = cfg["vector_size"], cfg["npe"], cfg["reuse"]
     data_type = cfg["data_type"]
+    preload = cfg.get("preload", 0)
     tag = _shape_tag(cfg, defaults)
+    tv_dir = _tv_dir(preload)
 
-    mem_file = str(TV_DIR / "memory"  / f"data_memory_{tag}.txt")
+    mem_file = str(tv_dir / "memory"  / f"data_memory_{tag}.txt")
     if quantize_bf16:
-        res_file = str(TV_DIR / "result_bf16" / f"result_{tag}.txt")
+        res_file = str(tv_dir / "result_bf16" / f"result_{tag}.txt")
     elif quantize:
-        res_file = str(TV_DIR / "result_mx" / f"result_{tag}.txt")
+        res_file = str(tv_dir / "result_mx" / f"result_{tag}.txt")
     else:
-        res_file = str(TV_DIR / "result" / f"result_{tag}.txt")
+        res_file = str(tv_dir / "result" / f"result_{tag}.txt")
 
     bender_args = [
         "-t", "rtl",
@@ -214,6 +221,7 @@ def generate_compile_tcl(cfg, defaults, workdir):
         "--define", f"N={N}",
         "--define", f"QUANTIZE_MXFP8={quantize}",
         "--define", f"QUANTIZE_BF16={quantize_bf16}",
+        "--define", f"PRELOAD={preload}",
         "--define", f"PROB_STALL={defaults['prob_stall']}",
         "--define", f"NO_STALLS={cfg['no_stalls']}",
         "--define", f"NUM_JOBS={cfg.get('num_jobs', 1)}",
@@ -252,6 +260,8 @@ def run_test(cfg, defaults):
     q_str = "BF16" if quantize_bf16 else ("MX" if quantize else "FP32")
     stall_str = "stall" if cfg["no_stalls"] == 0 else "nostall"
     name = f"{data_type}_VS{vs}_MX{npe}_O{reuse}_M{M}_K{K}_N{N}_{q_str}_{stall_str}"
+    if cfg.get("preload", 0):
+        name += "_preload"
     if cfg.get("num_jobs", 1) > 1:
         name += f"_jobs{cfg['num_jobs']}"
 
@@ -267,6 +277,7 @@ def run_test(cfg, defaults):
         "name": name, "M": M, "K": K, "N": N,
         "vector_size": vs, "npe": npe, "reuse": reuse, "data_type": data_type,
         "no_stalls": cfg["no_stalls"],
+        "preload": cfg.get("preload", 0), "num_jobs": cfg.get("num_jobs", 1),
         "quantize": quantize, "quantize_bf16": quantize_bf16, "tile_mode": tile_mode,
         "status": "UNKNOWN", "reason": "",
     }
@@ -362,15 +373,15 @@ def run_test(cfg, defaults):
 
 # ── Pretty-print results table ───────────────────────────────────────────────
 def _print_table(title, results_subset):
-    sort_key = lambda x: (x["data_type"], x["vector_size"], x["npe"], x["reuse"], x["M"], x["K"], x["N"], x["no_stalls"])
+    sort_key = lambda x: (x["data_type"], x["vector_size"], x["npe"], x["reuse"], x["M"], x["K"], x["N"], x["preload"], x["num_jobs"], x["no_stalls"])
     sorted_r = sorted(results_subset, key=sort_key)
 
-    w = 108
+    w = 118
     print(f"\n{C_BOLD}{'═' * w}{C_RESET}")
     print(f"{C_BOLD}  {title}{C_RESET}")
     print(f"{C_BOLD}{'═' * w}{C_RESET}")
 
-    hdr = f"  {'HW (VS,NPE,Reuse)':<19} {'Type':<5} {'(M,K,N)':<16} {'Stall':<6} {'Tile Mode':<12} {'Status':<10} {'Reason'}"
+    hdr = f"  {'HW (VS,NPE,Reuse)':<19} {'Type':<5} {'(M,K,N)':<16} {'Pre':<4} {'Jobs':<5} {'Stall':<6} {'Tile Mode':<12} {'Status':<10} {'Reason'}"
     print(f"{C_BOLD}{C_DIM}{hdr}{C_RESET}")
     print(f"  {'─' * (w - 2)}")
 
@@ -379,6 +390,7 @@ def _print_table(title, results_subset):
         hw = f"({r['vector_size']},{r['npe']},{r['reuse']})"
         dims = f"({r['M']},{r['K']},{r['N']})"
         stall = "on" if r["no_stalls"] == 0 else "off"
+        pre = "on" if r["preload"] else "off"
 
         if r["status"] == "PASS":
             st = f"{C_GREEN}{C_BOLD}  PASS  {C_RESET}"
@@ -390,7 +402,7 @@ def _print_table(title, results_subset):
             st = f"{C_BG_RED}{C_WHITE}{C_BOLD}  FAIL  {C_RESET}"
 
         reason = r["reason"][:45]
-        print(f"  {hw:<19} {r['data_type']:<5} {dims:<16} {stall:<6} {tc}{r['tile_mode']:<12}{C_RESET} {st}  {C_DIM}{reason}{C_RESET}")
+        print(f"  {hw:<19} {r['data_type']:<5} {dims:<16} {pre:<4} {r['num_jobs']:<5} {stall:<6} {tc}{r['tile_mode']:<12}{C_RESET} {st}  {C_DIM}{reason}{C_RESET}")
 
 
 def print_results(results):

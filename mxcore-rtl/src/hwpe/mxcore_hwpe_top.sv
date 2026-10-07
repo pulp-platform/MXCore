@@ -15,16 +15,16 @@ module mxcore_hwpe_top
   parameter int unsigned NumCores = mxcore_hwpe_package::NumCores
 ) (
   // Global Signals
-  input  logic                                  clk_i,
-  input  logic                                  rst_ni,
-  input  logic                                  test_mode_i,
+  input  logic                                    clk_i,
+  input  logic                                    rst_ni,
+  input  logic                                    test_mode_i,
   // Events
-  output logic [NumCores-1:0][REGFILE_N_EVT-1:0] evt_o,
-  output logic                                  busy_o,
+  output logic [NumCores-1:0][REGFILE_N_EVT-1:0]  evt_o,
+  output logic                                    busy_o,
   // TCDM Master Ports
-  hci_core_intf.initiator                       tcdm,
+  hci_core_intf.initiator                         tcdm,
   // Peripheral Slave Port
-  hwpe_ctrl_intf_periph.slave                   periph
+  hwpe_ctrl_intf_periph.slave                     periph
 );
 
   // Control and Status Signals
@@ -80,62 +80,20 @@ module mxcore_hwpe_top
   );
 
   hwpe_stream_intf_stream #(
-    .DATA_WIDTH ( MXCoreVectorADataWidth  )
+    .DATA_WIDTH ( MXCoreVectorDataWidth   )
   ) mxcore_engine_vector_a (
     .clk ( clk_i )
   );
 
   hwpe_stream_intf_stream #(
-    .DATA_WIDTH ( MXCoreVectorsBDataWidth )
-  ) mxcore_engine_vectors_b (
-    .clk ( clk_i )
-  );
-
-  hwpe_stream_intf_stream #(
-    .DATA_WIDTH ( MXCoreScaleADataWidth   )
+    .DATA_WIDTH ( MXCoreScaleDataWidth    )
   ) mxcore_engine_scale_a (
-    .clk ( clk_i )
-  );
-
-  hwpe_stream_intf_stream #(
-    .DATA_WIDTH ( MXCoreScaleBDataWidth   )
-  ) mxcore_engine_scale_b (
-    .clk ( clk_i )
-  );
-
-  hwpe_stream_intf_stream #(
-    .DATA_WIDTH ( MXCoreEngineResultDataWidth )
-  ) mxcore_engine_preload_bias (
     .clk ( clk_i )
   );
 
   hwpe_stream_intf_stream #(
     .DATA_WIDTH ( MXCoreEngineResultDataWidth )
   ) mxcore_engine_result (
-    .clk ( clk_i )
-  );
-
-  hwpe_stream_intf_stream #(
-    .DATA_WIDTH ( MXCoreVectorADataWidth  )
-  ) vector_a_prefence (
-    .clk ( clk_i )
-  );
-
-  hwpe_stream_intf_stream #(
-    .DATA_WIDTH ( MXCoreVectorsBDataWidth )
-  ) vectors_b_prefence (
-    .clk ( clk_i )
-  );
-
-  hwpe_stream_intf_stream #(
-    .DATA_WIDTH ( MXCoreScaleADataWidth   )
-  ) scale_a_prefence (
-    .clk ( clk_i )
-  );
-
-  hwpe_stream_intf_stream #(
-    .DATA_WIDTH ( MXCoreScaleBDataWidth   )
-  ) scale_b_prefence (
     .clk ( clk_i )
   );
 
@@ -188,99 +146,35 @@ module mxcore_hwpe_top
   );
   // ----------------- END: Input and Output HWPE Data Streams ----------------- //
 
-  // --------------------------- BEGIN: Input Buffers  ------------------------- //
+  // ---------------------- BEGIN: Broadcast Input Buffers  --------------------- //
   // Matrix A Buffer
   mxcore_hwpe_fifo_buffer #(
-    .InputDataWidth   ( MXCoreTCDMDataWidth      ),
-    .OutputDataWidth  ( MXCoreVectorADataWidth  ),
-    .FifoDepth         ( 2                   )
+    .InputDataWidth   ( MXCoreTCDMDataWidth   ),
+    .OutputDataWidth  ( MXCoreVectorDataWidth ),
+    .FifoDepth        ( 2                     )
   ) i_vector_a_buffer (
-    .clk_i  ( clk_i                     ),
-    .rst_ni ( rst_ni                    ),
-    .clear_i( clear                     ),
-    .data_i ( mxcore_vector_a.sink      ),
-    .data_o ( vector_a_prefence.source  )
-  );
-
-  // Matrix B Buffer
-  mxcore_hwpe_multi_fifo_buffer #(
-    .InputDataWidth   ( MXCoreTCDMDataWidth      ),
-    .OutputDataWidth  ( MXCoreVectorsBDataWidth ),
-    .ReuseFactor       ( Reuse               ),
-    .FifoDepth         ( 2                   )
-  ) i_vectors_b_buffer (
-    .clk_i            ( clk_i                       ),
-    .rst_ni           ( rst_ni                      ),
-    .clear_i          ( clear                       ),
-    .data_i           ( mxcore_vectors_b.sink       ),
-    .data_o           ( vectors_b_prefence.source   )
+    .clk_i  ( clk_i                         ),
+    .rst_ni ( rst_ni                        ),
+    .clear_i( clear                         ),
+    .data_i ( mxcore_vector_a.sink          ),
+    .data_o ( mxcore_engine_vector_a.source )
   );
 
   // Scale A Buffer
   mxcore_hwpe_fifo_scale_buffer #(
-    .InputDataWidth   ( MXCoreTCDMDataWidth              ),
-    .OutputDataWidth  ( MXCoreScaleADataWidth           ),
-    .ReuseFactor       ( Reuse                       ),
-    .ScaleFactor       ( BlockSize / VectorSize     ),
-    .FifoDepth         ( 2                           )
+    .InputDataWidth   ( MXCoreTCDMDataWidth     ),
+    .OutputDataWidth  ( MXCoreScaleDataWidth    ),
+    .ReuseFactor      ( Reuse                   ),
+    .ScaleFactor      ( BlockSize / VectorSize  ),
+    .FifoDepth        ( 2                       )
   ) i_scale_a_buffer (
-    .clk_i              ( clk_i                       ),
-    .rst_ni             ( rst_ni                      ),
-    .clear_i            ( clear                       ),
-    .data_i             ( mxcore_scale_a.sink         ),
-    .data_o             ( scale_a_prefence.source     )
+    .clk_i              ( clk_i                         ),
+    .rst_ni             ( rst_ni                        ),
+    .clear_i            ( clear                         ),
+    .data_i             ( mxcore_scale_a.sink           ),
+    .data_o             ( mxcore_engine_scale_a.source  )
   );
-
-  // Scale B Buffer
-  mxcore_hwpe_multi_fifo_scale_buffer #(
-    .InputDataWidth     ( MXCoreTCDMDataWidth              ),
-    .OutputDataWidth    ( MXCoreScaleBDataWidth           ),
-    .ReuseFactor         ( Reuse                       ),
-    .ScaleFactor         ( BlockSize / VectorSize     ),
-    .FifoDepth           ( 2                           )
-  ) i_scale_b_buffer (
-    .clk_i            ( clk_i                       ),
-    .rst_ni           ( rst_ni                      ),
-    .clear_i          ( clear                       ),
-    .sbmat_lt_bw_i    ( engine_ctrl.sbmat_lt_bw     ),
-    .data_i           ( mxcore_scale_b.sink         ),
-    .data_o           ( scale_b_prefence.source     )
-  );
-
-  // Preload Bias Buffer
-  mxcore_hwpe_result_fifo_buffer #(
-    .InputDataWidth     ( MXCoreTCDMDataWidth         ),
-    .OutputDataWidth    ( MXCoreEngineResultDataWidth ),
-    .FifoDepth          ( 2                           )
-  ) i_preload_bias_buffer (
-    .clk_i    ( clk_i                             ),
-    .rst_ni   ( rst_ni                            ),
-    .clear_i  ( clear                             ),
-    .data_i   ( mxcore_preload_bias.sink          ),
-    .data_o   ( mxcore_engine_preload_bias.source )
-  );
-  // --------------------------- END: Input Buffers  --------------------------- //
-
-  // ------------------------------- Input Fence ------------------------------- //
-  mxcore_hwpe_input_fence #(
-    .MXCoreVectorADataWidth   ( MXCoreVectorADataWidth  ),
-    .MXCoreVectorsBDataWidth  ( MXCoreVectorsBDataWidth ),
-    .MXCoreScaleADataWidth    ( MXCoreScaleADataWidth   ),
-    .MXCoreScaleBDataWidth    ( MXCoreScaleBDataWidth   )
-  ) i_input_fence (
-    .clk_i          ( clk_i                             ),
-    .rst_ni         ( rst_ni                            ),
-    .clear_i        ( clear                             ),
-    .test_mode_i    ( test_mode_i                       ),
-    .vector_a_i     ( vector_a_prefence.sink            ),
-    .vectors_b_i    ( vectors_b_prefence.sink           ),
-    .scale_a_i      ( scale_a_prefence.sink             ),
-    .scale_b_i      ( scale_b_prefence.sink             ),
-    .vector_a_o     ( mxcore_engine_vector_a.source     ),
-    .vectors_b_o    ( mxcore_engine_vectors_b.source    ),
-    .scale_a_o      ( mxcore_engine_scale_a.source      ),
-    .scale_b_o      ( mxcore_engine_scale_b.source      )
-  );
+  // ---------------------- END: Broadcast Input Buffers  ----------------------- //
 
   // ------------------------- MXCore HWPE Controller -------------------------- //
   mxcore_hwpe_ctrl #(
@@ -302,18 +196,18 @@ module mxcore_hwpe_top
 
   // -------------------------- MXCore Engine ---------------------------------- //
   mxcore_hwpe_engine i_engine (
-    .clk_i          ( clk_i                           ),
-    .rst_ni         ( rst_ni                          ),
-    .clear_i        ( clear                           ),
-    .test_mode_i    ( test_mode_i                     ),
-    .vector_a_i     ( mxcore_engine_vector_a.sink     ),
-    .vectors_b_i    ( mxcore_engine_vectors_b.sink    ),
-    .scale_a_i      ( mxcore_engine_scale_a.sink      ),
-    .scale_b_i      ( mxcore_engine_scale_b.sink      ),
-    .preload_bias_i ( mxcore_engine_preload_bias.sink ),
-    .result_o       ( mxcore_engine_result.source     ),
-    .ctrl_i         ( engine_ctrl                     ),
-    .flags_o        ( engine_flags                    )
+    .clk_i          ( clk_i                         ),
+    .rst_ni         ( rst_ni                        ),
+    .clear_i        ( clear                         ),
+    .test_mode_i    ( test_mode_i                   ),
+    .vector_a_i     ( mxcore_engine_vector_a.sink   ),
+    .vectors_b_i    ( mxcore_vectors_b.sink         ),
+    .scale_a_i      ( mxcore_engine_scale_a.sink    ),
+    .scale_b_i      ( mxcore_scale_b.sink           ),
+    .preload_bias_i ( mxcore_preload_bias.sink      ),
+    .result_o       ( mxcore_engine_result.source   ),
+    .ctrl_i         ( engine_ctrl                   ),
+    .flags_o        ( engine_flags                  )
   );
 
   // ------------------------ MXCore Engine Result DEMUX ----------------------- //

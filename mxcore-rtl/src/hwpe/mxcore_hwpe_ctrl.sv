@@ -17,21 +17,21 @@ module mxcore_hwpe_ctrl
   parameter int unsigned NumCores = mxcore_hwpe_package::NumCores
 ) (
   // Global Signals
-  input  logic                                  clk_i,
-  input  logic                                  rst_ni,
-  input  logic                                  test_mode_i,
-  output logic                                  clear_o,
+  input  logic                                    clk_i,
+  input  logic                                    rst_ni,
+  input  logic                                    test_mode_i,
+  output logic                                    clear_o,
   // Events
-  output logic [NumCores-1:0][REGFILE_N_EVT-1:0] evt_o,
-  output logic                                  busy_o,
+  output logic [NumCores-1:0][REGFILE_N_EVT-1:0]  evt_o,
+  output logic                                    busy_o,
   // Control & Flags
-  output ctrl_streamer_t                        ctrl_streamer_o,
-  input  flags_streamer_t                       flags_streamer_i,
-  output ctrl_engine_t                          ctrl_engine_o,
-  input  flags_engine_t                         flags_engine_i,
-  input  flags_fifo_t                           flags_fifo_i,
+  output ctrl_streamer_t                          ctrl_streamer_o,
+  input  flags_streamer_t                         flags_streamer_i,
+  output ctrl_engine_t                            ctrl_engine_o,
+  input  flags_engine_t                           flags_engine_i,
+  input  flags_fifo_t                             flags_fifo_i,
   // Periph Slave Port
-  hwpe_ctrl_intf_periph.slave                   periph
+  hwpe_ctrl_intf_periph.slave                     periph
 );
 
   localparam int unsigned LOG_CONTEXT = NumContext > 1 ? $clog2(NumContext) : 1;

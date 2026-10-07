@@ -32,13 +32,13 @@ module mxcore_hwpe_fifo_scale_buffer
     .clk ( clk_i    )
   );
 
-  localparam int unsigned FIFO_FACTOR   = InputDataWidth / OutputDataWidth;
-  localparam int unsigned SCALE_COUNT   = (ReuseFactor * SCALE_WIDTH > InputDataWidth) ? 1 : ScaleFactor;
+  localparam int unsigned FIFO_FACTOR       = InputDataWidth / OutputDataWidth;
+  localparam int unsigned SCALE_COUNT       = (ReuseFactor * SCALE_WIDTH > InputDataWidth) ? 1 : ScaleFactor;
 
   localparam int unsigned SCALE_BLOCK_WIDTH = ReuseFactor * OutputDataWidth;
   localparam int unsigned NBLOCKS           = (FIFO_FACTOR >= ReuseFactor) ? (FIFO_FACTOR / ReuseFactor) : 1;
 
-  logic [$clog2(ReuseFactor)-1:0]  reuse_cnt_d, reuse_cnt_q;
+  logic [$clog2(ReuseFactor)-1:0]   reuse_cnt_d, reuse_cnt_q;
   logic [$clog2(SCALE_COUNT)-1:0]   scale_reuse_cnt_d, scale_reuse_cnt_q;
   logic [$clog2(NBLOCKS)-1:0]       block_count_d, block_count_q;
 
@@ -91,10 +91,10 @@ module mxcore_hwpe_fifo_scale_buffer
   `FFARNC(block_count_q,     block_count_d,     clear_i, '0)
 
   hwpe_stream_fifo #(
-    .DATA_WIDTH (InputDataWidth),
-    .FIFO_DEPTH (FifoDepth),
-    .LATCH_FIFO (LatchFifo),
-    .LATCH_FIFO_TEST_WRAP (LatchFifoTestWrap)
+    .DATA_WIDTH           ( InputDataWidth    ),
+    .FIFO_DEPTH           ( FifoDepth         ),
+    .LATCH_FIFO           ( LatchFifo         ),
+    .LATCH_FIFO_TEST_WRAP ( LatchFifoTestWrap )
   ) i_data_fifo (
     .clk_i      ( clk_i     ),
     .rst_ni     ( rst_ni    ),

@@ -14,6 +14,7 @@ package mxcore_package;
   parameter int unsigned    NumPipeRegs = `ifdef NUM_PIPE_REGS `NUM_PIPE_REGS `else 4 `endif;
 
   parameter int unsigned    PreloadThreshold  = `ifdef PRELOAD_THRESHOLD `PRELOAD_THRESHOLD `else (Reuse / 2) `endif;
+  parameter int unsigned    GOBAddrWidth      = (Reuse > 1) ? $clog2(Reuse) : 1;
 
   parameter type                     TagType     = logic;
   parameter type                     AuxType     = logic;
@@ -21,6 +22,10 @@ package mxcore_package;
 
   parameter int unsigned             NumOperands   = 2*VectorSize+1;
   parameter int unsigned             LaneWidth     = VectorSize*SRC_WIDTH;
+
+  // Vector/Scale Datawidths
+  parameter int unsigned MXCoreVectorDataWidth    = VectorSize*SRC_WIDTH;
+  parameter int unsigned MXCoreScaleDataWidth     = SCALE_WIDTH;
 
   // Microscaling (MX) Parameters
   parameter int unsigned BlockSize                = 32;
