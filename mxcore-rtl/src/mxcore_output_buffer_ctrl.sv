@@ -6,81 +6,65 @@
 
 `include "common_cells/registers.svh"
 
-module mxcore_output_buffer_ctrl #(
-  parameter int unsigned Reuse            = 64,
-  parameter int unsigned NPE              = 32,
-  parameter int unsigned PeDataWidth      = 32,
-  parameter int unsigned InputDataWidth   = 512,
-  parameter int unsigned PreloadThreshold = Reuse / 2,
-  // Do not change the following parameters
-  parameter int unsigned AddrWidth        = (Reuse > 1) ? $clog2(Reuse) : 1
-) (
+module mxcore_output_buffer_ctrl (
   // Global Signals
-  input  logic                  clk_i,
-  input  logic                  rst_ni,
-  input  logic                  clear_i,
+  input  logic          clk_i,
+  input  logic          rst_ni,
+  input  logic          clear_i,
   // Handshake Signals - Result Data from MXDOTP Array
-  input  logic                  mxdotp_result_valid_i,
-  output logic                  mxdotp_result_ready_o,
+  input  logic          mxdotp_result_valid_i,
+  output logic          mxdotp_result_ready_o,
   // Last Iteration Signal - Written Result is a Final Tile Result
-  input  logic                  last_iter_i,
+  input  logic          last_iter_i,
   // Accumulator Preload
-  input  logic                  preload_i,
-  input  logic                  tile_end_i,
-  input  logic                  preload_bias_valid_i,
-  output logic                  preload_bias_ready_o,
-  output logic                  preload_ready_o,
+  input  logic          preload_i,
+  input  logic          tile_end_i,
+  input  logic          preload_bias_valid_i,
+  output logic          preload_bias_ready_o,
+  output logic          preload_ready_o,
   // Handshake Signals - Partial Results from the Output Buffer to MXDOTP Array
-  output logic                  obuff_result_valid_o,
-  input  logic                  obuff_result_ready_i,
+  output logic          obuff_result_valid_o,
+  input  logic          obuff_result_ready_i,
   // Handshake Signals - Final Tile Results from the Output Buffer to TCDM
-  output logic                  tile_result_valid_o,
-  input  logic                  tile_result_ready_i,
+  output logic          tile_result_valid_o,
+  input  logic          tile_result_ready_i,
   // Output Buffer Control
-  output logic                  write_enable_o,
-  output logic [AddrWidth-1:0]  write_addr_o,
-  output logic [NPE-1:0]        bias_write_enable_o,
-  output logic [AddrWidth-1:0]  bias_write_addr_o,
-  output logic [AddrWidth-1:0]  read_addr_o,
-  output logic [AddrWidth-1:0]  tile_addr_o,
+  output logic          write_enable_o,
+  output logic [5:0]    write_addr_o,
+  output logic [31:0]   bias_write_enable_o,
+  output logic [5:0]    bias_write_addr_o,
+  output logic [5:0]    read_addr_o,
+  output logic [5:0]    tile_addr_o,
   // Buffer Status
-  output logic                  empty_o
+  output logic          empty_o
 );
 
-  localparam int unsigned BiasRowWidth    = NPE * PeDataWidth;
-  localparam int unsigned BiasWords       = (BiasRowWidth > InputDataWidth) ? (BiasRowWidth / InputDataWidth) : 1;
-  localparam int unsigned UnitsPerWrite   = ((BiasRowWidth < InputDataWidth) ? BiasRowWidth : InputDataWidth) / PeDataWidth;
-  localparam int unsigned BiasWordWidth   = (BiasWords > 1) ? $clog2(BiasWords) : 1;
-
-  if (BiasRowWidth < InputDataWidth) begin : gen_bias_width_check
-    $fatal(1, "mxcore_output_buffer_ctrl: NPE*PeDataWidth (%0d) must be >= InputDataWidth (%0d)", BiasRowWidth, InputDataWidth);
-  end
+  localparam int unsigned Reuse            = 64;
+  localparam int unsigned PreloadThreshold = 32;
 
   // Status Registers
-  logic [Reuse-1:0]               status_d, status_q;
-  logic [Reuse-1:0]               tile_status_d, tile_status_q;
+  logic [63:0]    status_d, status_q;
+  logic [63:0]    tile_status_d, tile_status_q;
 
   // Write Signals
-  logic                           write_enable;
-  logic [AddrWidth-1:0]           write_addr_d, write_addr_q;
+  logic           write_enable;
+  logic [5:0]     write_addr_d, write_addr_q;
 
   // Preload Write Signals
-  logic [NPE-1:0]                 bias_write_enable;
-  logic                           bias_allowed, bias_row_open;
-  logic [AddrWidth-1:0]           bias_addr_d, bias_addr_q;
-  logic [BiasWordWidth-1:0]       bias_word_d, bias_word_q;
+  logic [31:0]    bias_write_enable;
+  logic           bias_allowed;
+  logic [5:0]     bias_addr_d, bias_addr_q;
+  logic           bias_word_d, bias_word_q;
 
   // Read - Port 1 Signals
-  logic [AddrWidth-1:0]           read_addr_d, read_addr_q;
+  logic [5:0]     read_addr_d, read_addr_q;
 
   // Read - Port 2 Signals
-  logic [AddrWidth-1:0]           tile_addr_d, tile_addr_q;
+  logic [5:0]     tile_addr_d, tile_addr_q;
 
   // Preload Counters
-  logic [$clog2(2*Reuse+1)-1:0]   preload_count_d, preload_count_q;
-  logic [$clog2(Reuse+1)-1:0]     final_count_d, final_count_q;
-
-  assign bias_row_open = (bias_word_q != '0);
+  logic [7:0]     preload_count_d, preload_count_q;
+  logic [6:0]     final_count_d, final_count_q;
 
   always_comb begin
     // Default Assignments
@@ -96,7 +80,7 @@ module mxcore_output_buffer_ctrl #(
     preload_count_d       = preload_count_q;
     final_count_d         = final_count_q;
     // Write Port - MXDOTP Results
-    mxdotp_result_ready_o = !status_q[write_addr_q] && !(bias_row_open && (write_addr_q == bias_addr_q));
+    mxdotp_result_ready_o = !status_q[write_addr_q] && !(bias_word_q && (write_addr_q == bias_addr_q));
     if (mxdotp_result_valid_i && mxdotp_result_ready_o) begin
       write_enable                = 1'b1;
       status_d[write_addr_q]      = 1'b1;
@@ -106,19 +90,19 @@ module mxcore_output_buffer_ctrl #(
         final_count_d = final_count_q + 1;
       end
     end
-    // Write Port - Preload Bias Rows (BiasWords Input Words per Row)
+    // Write Port - Preload Bias Rows (Two Input Words per Row)
     bias_allowed          = preload_count_q < (Reuse + final_count_q);
-    preload_bias_ready_o  = preload_i && (bias_allowed || bias_row_open) && !status_q[bias_addr_q];
+    preload_bias_ready_o  = preload_i && (bias_allowed || bias_word_q) && !status_q[bias_addr_q];
     if (preload_bias_valid_i && preload_bias_ready_o) begin
-      bias_write_enable[bias_word_q*UnitsPerWrite+:UnitsPerWrite] = '1;
-      if (bias_word_q == BiasWords-1) begin
-        bias_word_d                 = '0;
+      bias_write_enable[bias_word_q*16+:16] = '1;
+      if (bias_word_q) begin
+        bias_word_d                 = 1'b0;
         status_d[bias_addr_q]       = 1'b1;
         tile_status_d[bias_addr_q]  = 1'b0;
         bias_addr_d                 = (bias_addr_q == Reuse-1) ? '0 : bias_addr_q + 1;
         preload_count_d             = preload_count_d + 1;
       end else begin
-        bias_word_d                 = bias_word_q + 1;
+        bias_word_d                 = 1'b1;
       end
     end
     if (tile_end_i) begin

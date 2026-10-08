@@ -4,69 +4,62 @@
 //
 // Jayanth Jonnalagadda <jjonnalagadd@iis.ee.ethz.ch>
 
-module mxcore_pe
-  import fpnew_mxdotp_multi_pkg::*;
-  import mxcore_package::*;
-(
+module mxcore_pe (
   // Global Signals
-  input  logic                                      clk_i,
-  input  logic                                      rst_ni,
+  input  logic                    clk_i,
+  input  logic                    rst_ni,
   // Input Operands
-  input  logic [MXCoreVectorDataWidth-1:0]          vector_a_i,
-  input  logic [MXCoreScaleDataWidth-1:0]           scale_a_i,
+  input  logic [255:0]            vector_a_i,
+  input  logic [7:0]              scale_a_i,
   // Vector B Buffer
-  input  logic [MXCoreVectorDataWidth-1:0]          vector_b_i,
-  input  logic                                      vector_b_write_enable_i,
-  input  logic                                      vector_b_write_addr_i,
-  input  logic                                      vector_b_read_addr_i,
+  input  logic [255:0]            vector_b_i,
+  input  logic                    vector_b_write_enable_i,
+  input  logic                    vector_b_write_addr_i,
+  input  logic                    vector_b_read_addr_i,
   // Scale B Buffer
-  input  logic [MXCoreScaleDataWidth-1:0]           scale_b_i,
-  input  logic                                      scale_b_write_enable_i,
-  input  logic                                      scale_b_write_addr_i,
-  input  logic                                      scale_b_read_addr_i,
+  input  logic [7:0]              scale_b_i,
+  input  logic                    scale_b_write_enable_i,
+  input  logic                    scale_b_write_addr_i,
+  input  logic                    scale_b_read_addr_i,
   // Output Buffer
-  input  logic                                      output_buffer_write_enable_i,
-  input  logic [GOBAddrWidth-1:0]                   output_buffer_write_addr_i,
-  input  logic [DST_WIDTH-1:0]                      preload_bias_i,
-  input  logic                                      bias_write_enable_i,
-  input  logic [GOBAddrWidth-1:0]                   bias_write_addr_i,
-  input  logic [GOBAddrWidth-1:0]                   output_buffer_read_addr_i,
-  input  logic [GOBAddrWidth-1:0]                   output_buffer_tile_addr_i,
-  input  logic                                      obuff_result_ready_i,
+  input  logic                    output_buffer_write_enable_i,
+  input  logic [5:0]              output_buffer_write_addr_i,
+  input  logic [31:0]             preload_bias_i,
+  input  logic                    bias_write_enable_i,
+  input  logic [5:0]              bias_write_addr_i,
+  input  logic [5:0]              output_buffer_read_addr_i,
+  input  logic [5:0]              output_buffer_tile_addr_i,
+  input  logic                    obuff_result_ready_i,
   // Input Control Signals
-  input  fpnew_pkg::roundmode_e                     rnd_mode_i,
-  input  fpnew_pkg::operation_e                     op_i,
-  input  logic                                      op_mod_i,
-  input  fpnew_pkg::fp_format_e                     src_fmt_i,
-  input  fpnew_pkg::int_format_e                    int_fmt_i,
-  input  fpnew_pkg::fp_format_e                     dst_fmt_i,
+  input  fpnew_pkg::roundmode_e   rnd_mode_i,
+  input  fpnew_pkg::fp_format_e   src_fmt_i,
   // Input Handshake
-  input  logic                                      in_valid_i,
-  output logic                                      in_ready_o,
-  input  logic                                      flush_i,
+  input  logic                    in_valid_i,
+  output logic                    in_ready_o,
+  input  logic                    flush_i,
   // Output Signals
-  output logic [DST_WIDTH-1:0]                      tile_result_o,
+  output logic [31:0]             tile_result_o,
   // Output Handshake
-  output logic                                      out_valid_o,
-  input  logic                                      out_ready_i,
+  output logic                    out_valid_o,
+  input  logic                    out_ready_i,
   // Indication of Valid Data in Flight
-  output logic                                      busy_o
+  output logic                    busy_o
 );
 
-  logic [MXCoreVectorDataWidth-1:0]       vector_b;
-  logic [MXCoreScaleDataWidth-1:0]        scale_b;
-  logic [1:0][MXCoreScaleDataWidth-1:0]   operands_c;
-  logic [DST_WIDTH-1:0]                   operand_d;
-  logic [DST_WIDTH-1:0]                   obuff_result;
-  logic [DST_WIDTH-1:0]                   tile_result;
-  logic [DST_WIDTH-1:0]                   mxdotp_result;
+  logic [255:0]       vector_b;
+  logic [7:0]         scale_b;
+  logic [1:0][7:0]    operands_c;
+  logic [31:0]        operand_d;
+  logic [31:0]        obuff_result;
+  logic [31:0]        tile_result;
+  logic [31:0]        mxdotp_result;
 
   assign operands_c = {scale_b, scale_a_i};
   assign operand_d  = obuff_result_ready_i ? obuff_result : '0;
 
   mxcore_register_file_1r_1w #(
-    .ADDR_WIDTH ( 1                     ),
-    .DATA_WIDTH ( MXCoreVectorDataWidth )
+    .ADDR_WIDTH ( 1   ),
+    .DATA_WIDTH ( 256 )
   ) i_vector_b_buffer (
     .clk          ( clk_i                   ),
     .ReadEnable   ( 1'b1                    ),
@@ -78,8 +71,8 @@ module mxcore_pe
   );
 
   mxcore_register_file_1r_1w #(
-    .ADDR_WIDTH ( 1                     ),
-    .DATA_WIDTH ( MXCoreScaleDataWidth  )
+    .ADDR_WIDTH ( 1   ),
+    .DATA_WIDTH ( 8   )
   ) i_scale_b_buffer (
     .clk          ( clk_i                   ),
     .ReadEnable   ( 1'b1                    ),
@@ -91,8 +84,8 @@ module mxcore_pe
   );
 
   mxcore_register_file_2r_2w #(
-    .ADDR_WIDTH ( GOBAddrWidth  ),
-    .DATA_WIDTH ( DST_WIDTH     )
+    .ADDR_WIDTH ( 6   ),
+    .DATA_WIDTH ( 32  )
   ) i_output_buffer (
     .clk        ( clk_i                         ),
     .rst_n      ( rst_ni                        ),
@@ -108,47 +101,22 @@ module mxcore_pe
     .we_b_i     ( bias_write_enable_i           )
   );
 
-  fpnew_mxdotp_multi #(
-    .FpSrcFmtConfig   ( EnMxdotpSrcFpFmtConfig  ),
-    .IntSrcFmtConfig  ( EnMxdotpSrcIntFmtConfig ),
-    .FpDstFmtConfig   ( EnMxdotpDstFpFmtConfig  ),
-    .LaneWidth        ( LaneWidth               ),
-    .VectorSize       ( VectorSize              ),
-    .NumPipeRegs      ( NumPipeRegs             ),
-    .PipeConfig       ( PipeConfig              ),
-    .TagType          ( TagType                 ),
-    .AuxType          ( AuxType                 )
-  ) i_fpnew_mxdotp_multi (
-    .clk_i                 ( clk_i          ),
-    .rst_ni                ( rst_ni         ),
-    .operands_a_i          ( vector_a_i     ),
-    .operands_b_i          ( vector_b       ),
-    .operands_a_fp6_rem_i  ( '0             ),
-    .operands_b_fp6_rem_i  ( '0             ),
-    .operands_c_i          ( operands_c     ),
-    .operand_d_i           ( operand_d      ),
-    .is_boxed_i            ( '1             ),
-    .rnd_mode_i            ( rnd_mode_i     ),
-    .op_i                  ( op_i           ),
-    .op_mod_i              ( op_mod_i       ),
-    .src_fmt_i             ( src_fmt_i      ),
-    .int_fmt_i             ( int_fmt_i      ),
-    .dst_fmt_i             ( dst_fmt_i      ),
-    .tag_i                 ( '0             ),
-    .mask_i                ( 1'b0           ),
-    .aux_i                 ( '0             ),
-    .in_valid_i            ( in_valid_i     ),
-    .in_ready_o            ( in_ready_o     ),
-    .flush_i               ( flush_i        ),
-    .out_valid_o           ( out_valid_o    ),
-    .out_ready_i           ( out_ready_i    ),
-    .result_o              ( mxdotp_result  ),
-    .status_o              (                ),
-    .extension_bit_o       (                ),
-    .tag_o                 (                ),
-    .mask_o                (                ),
-    .aux_o                 (                ),
-    .busy_o                ( busy_o         )
+  fpnew_mxdotp_multi_opt i_fpnew_mxdotp_multi (
+    .clk_i        ( clk_i         ),
+    .rst_ni       ( rst_ni        ),
+    .operands_a_i ( vector_a_i    ),
+    .operands_b_i ( vector_b      ),
+    .operands_c_i ( operands_c    ),
+    .operand_d_i  ( operand_d     ),
+    .rnd_mode_i   ( rnd_mode_i    ),
+    .src_fmt_i    ( src_fmt_i     ),
+    .in_valid_i   ( in_valid_i    ),
+    .in_ready_o   ( in_ready_o    ),
+    .flush_i      ( flush_i       ),
+    .result_o     ( mxdotp_result ),
+    .out_valid_o  ( out_valid_o   ),
+    .out_ready_i  ( out_ready_i   ),
+    .busy_o       ( busy_o        )
   );
 
   assign tile_result_o = tile_result;

@@ -4,80 +4,68 @@
 //
 // Jayanth Jonnalagadda <jjonnalagadd@iis.ee.ethz.ch>
 
-module mxcore_engine
-  import fpnew_mxdotp_multi_pkg::*;
-  import mxcore_package::*;
-#(
-  parameter int unsigned InputDataWidth = 512
-) (
+module mxcore_engine (
   // Global Signals
-  input  logic                                          clk_i,
-  input  logic                                          rst_ni,
-  input  logic                                          clear_i,
+  input  logic                    clk_i,
+  input  logic                    rst_ni,
+  input  logic                    clear_i,
   // Input signals
-  hwpe_stream_intf_stream.sink                          vector_a_i,
-  hwpe_stream_intf_stream.sink                          scale_a_i,
-  hwpe_stream_intf_stream.sink                          vectors_b_i,
-  hwpe_stream_intf_stream.sink                          scale_b_i,
-  hwpe_stream_intf_stream.sink                          preload_bias_i,
+  hwpe_stream_intf_stream.sink    vector_a_i,
+  hwpe_stream_intf_stream.sink    scale_a_i,
+  hwpe_stream_intf_stream.sink    vectors_b_i,
+  hwpe_stream_intf_stream.sink    scale_b_i,
+  hwpe_stream_intf_stream.sink    preload_bias_i,
   // Input Control/Configuration Signals
-  input  logic                                          sbmat_lt_bw_i,
-  input  fpnew_pkg::roundmode_e                         rnd_mode_i,
-  input  fpnew_pkg::operation_e                         op_i,
-  input  logic                                          op_mod_i,
-  input  fpnew_pkg::fp_format_e                         src_fmt_i,
-  input  fpnew_pkg::int_format_e                        int_fmt_i,
-  input  fpnew_pkg::fp_format_e                         dst_fmt_i,
-  input  logic [15:0]                                   iter_count_i,
-  input  logic                                          preload_i,
-  input  logic                                          compute_en_i,
-  input  logic                                          flush_i,
+  input  logic                    sbmat_lt_bw_i,
+  input  fpnew_pkg::roundmode_e   rnd_mode_i,
+  input  fpnew_pkg::fp_format_e   src_fmt_i,
+  input  logic [15:0]             iter_count_i,
+  input  logic                    preload_i,
+  input  logic                    compute_en_i,
+  input  logic                    flush_i,
   // Output Signals
-  hwpe_stream_intf_stream.source                        result_o,
+  hwpe_stream_intf_stream.source  result_o,
   // Preload Status Signals
-  output logic                                          preload_ready_o,
-  output logic                                          tile_end_o,
+  output logic                    preload_ready_o,
+  output logic                    tile_end_o,
   // Indication of valid data in flight
-  output logic                                          busy_o
+  output logic                    busy_o
 );
 
-  localparam int unsigned ScaleBDataWidth   = (NPE*MXCoreScaleDataWidth < InputDataWidth) ? (NPE*MXCoreScaleDataWidth) : InputDataWidth;
-  localparam int unsigned ScaleFactor       = BlockSize / VectorSize;
-
   // MXDOTP Array Signals
-  logic                                     mxdotp_in_ready;
-  logic                                     mxdotp_result_valid;
-  logic                                     mxdotp_result_ready;
-  logic                                     mxdotp_busy;
+  logic                   mxdotp_in_ready;
+  logic                   mxdotp_result_valid;
+  logic                   mxdotp_result_ready;
+  logic                   mxdotp_busy;
 
   // Vector B Buffer Signals
-  logic                                     vector_b_valid;
-  logic [NPE-1:0]                           vector_b_write_enable;
-  logic                                     vector_b_write_addr;
-  logic                                     vector_b_read_addr;
+  logic                   vector_b_valid;
+  logic [31:0]            vector_b_write_enable;
+  logic                   vector_b_write_addr;
+  logic                   vector_b_read_addr;
 
   // Scale B Buffer Signals
-  logic                                     scale_b_valid;
-  logic [NPE-1:0]                           scale_b_write_enable;
-  logic                                     scale_b_write_addr;
-  logic [ScaleBDataWidth-1:0]               scale_b;
-  logic                                     scale_b_read_addr;
+  logic                   scale_b_valid;
+  logic [31:0]            scale_b_write_enable;
+  logic                   scale_b_write_addr;
+  logic [511:0]           scale_b;
+  logic                   scale_b_read_addr;
 
   // Output Buffer Signals
-  logic                                     obuff_result_valid, obuff_result_ready;
-  logic                                     tile_result_valid, tile_result_ready;
-  logic [NPE-1:0][DST_WIDTH-1:0]            tile_result;
-  logic                                     obuff_empty;
-  logic                                     output_buffer_write_enable;
-  logic [GOBAddrWidth-1:0]                  output_buffer_write_addr;
-  logic [NPE-1:0]                           bias_write_enable;
-  logic [GOBAddrWidth-1:0]                  bias_write_addr;
-  logic [GOBAddrWidth-1:0]                  output_buffer_read_addr;
-  logic [GOBAddrWidth-1:0]                  output_buffer_tile_addr;
+  logic                   obuff_result_valid, obuff_result_ready;
+  logic                   tile_result_valid, tile_result_ready;
+  logic [31:0][31:0]      tile_result;
+  logic                   obuff_empty;
+  logic                   output_buffer_write_enable;
+  logic [5:0]             output_buffer_write_addr;
+  logic [31:0]            bias_write_enable;
+  logic [5:0]             bias_write_addr;
+  logic [5:0]             output_buffer_read_addr;
+  logic [5:0]             output_buffer_tile_addr;
 
   // Input Multiplexing
-  logic [MXCoreVectorDataWidth-1:0]         vector_a;
-  logic [MXCoreScaleDataWidth-1:0]          scale_a;
+  logic [255:0]           vector_a;
+  logic [7:0]             scale_a;
 
   // Iteration Status Signals
   logic first_iter, last_iter, tile_end;
@@ -95,9 +83,7 @@ module mxcore_engine
   assign vector_a           = in_fire ? vector_a_i.data : '0;
   assign scale_a            = in_fire ? scale_a_i.data  : '0;
 
-  mxcore_reuse_counters #(
-    .Reuse  ( Reuse )
-  ) i_reuse_counters (
+  mxcore_reuse_counters i_reuse_counters (
     .clk_i        ( clk_i         ),
     .rst_ni       ( rst_ni        ),
     .clear_i      ( clear_i       ),
@@ -110,11 +96,7 @@ module mxcore_engine
   );
 
   mxcore_b_buffer_ctrl #(
-    .InputDataWidth   ( InputDataWidth            ),
-    .OutputDataWidth  ( NPE*MXCoreVectorDataWidth ),
-    .NPE              ( NPE                       ),
-    .ReuseFactor      ( Reuse                     ),
-    .ScaleFactor      ( 1                         )
+    .IsScaleBuffer  ( 1'b0  )
   ) i_vector_b_buffer_ctrl (
     .clk_i          ( clk_i                 ),
     .rst_ni         ( rst_ni                ),
@@ -133,11 +115,7 @@ module mxcore_engine
   );
 
   mxcore_b_buffer_ctrl #(
-    .InputDataWidth   ( InputDataWidth            ),
-    .OutputDataWidth  ( NPE*MXCoreScaleDataWidth  ),
-    .NPE              ( NPE                       ),
-    .ReuseFactor      ( Reuse                     ),
-    .ScaleFactor      ( ScaleFactor               )
+    .IsScaleBuffer  ( 1'b1  )
   ) i_scale_b_buffer_ctrl (
     .clk_i          ( clk_i                 ),
     .rst_ni         ( rst_ni                ),
@@ -155,14 +133,7 @@ module mxcore_engine
     .empty_o        (                       )
   );
 
-  mxcore_output_buffer_ctrl #(
-    .Reuse            ( Reuse             ),
-    .NPE              ( NPE               ),
-    .PeDataWidth      ( DST_WIDTH         ),
-    .InputDataWidth   ( InputDataWidth    ),
-    .PreloadThreshold ( PreloadThreshold  ),
-    .AddrWidth        ( GOBAddrWidth      )
-  ) i_output_buffer_ctrl (
+  mxcore_output_buffer_ctrl i_output_buffer_ctrl (
     .clk_i                  ( clk_i                       ),
     .rst_ni                 ( rst_ni                      ),
     .clear_i                ( clear_i                     ),
@@ -187,9 +158,7 @@ module mxcore_engine
     .empty_o                ( obuff_empty                 )
   );
 
-  mxcore_pe_array #(
-    .InputDataWidth ( InputDataWidth  )
-  ) i_pe_array (
+  mxcore_pe_array i_pe_array (
     .clk_i                        ( clk_i                       ),
     .rst_ni                       ( rst_ni                      ),
     .vector_a_i                   ( vector_a                    ),
@@ -198,7 +167,7 @@ module mxcore_engine
     .vector_b_write_enable_i      ( vector_b_write_enable       ),
     .vector_b_write_addr_i        ( vector_b_write_addr         ),
     .vector_b_read_addr_i         ( vector_b_read_addr          ),
-    .scale_b_i                    ( scale_b                     ),
+    .scale_b_i                    ( scale_b[255:0]              ),
     .scale_b_write_enable_i       ( scale_b_write_enable        ),
     .scale_b_write_addr_i         ( scale_b_write_addr          ),
     .scale_b_read_addr_i          ( scale_b_read_addr           ),
@@ -211,11 +180,7 @@ module mxcore_engine
     .output_buffer_tile_addr_i    ( output_buffer_tile_addr     ),
     .obuff_result_ready_i         ( obuff_result_ready          ),
     .rnd_mode_i                   ( rnd_mode_i                  ),
-    .op_i                         ( op_i                        ),
-    .op_mod_i                     ( op_mod_i                    ),
     .src_fmt_i                    ( src_fmt_i                   ),
-    .int_fmt_i                    ( int_fmt_i                   ),
-    .dst_fmt_i                    ( dst_fmt_i                   ),
     .in_valid_i                   ( inputs_valid && in_accept   ),
     .in_ready_o                   ( mxdotp_in_ready             ),
     .flush_i                      ( flush_i                     ),

@@ -5,8 +5,6 @@
 // Jayanth Jonnalagadda <jjonnalagadd@iis.ee.ethz.ch>
 
 module mxcore_hwpe_engine
-  import fpnew_mxdotp_multi_pkg::*;
-  import mxcore_package::*;
   import mxcore_hwpe_package::*;
 (
   // Global Signals
@@ -33,9 +31,7 @@ module mxcore_hwpe_engine
 );
 
   // MXDOTP Engine - PE Array + Buffer Controllers + Reuse Counters
-  mxcore_engine #(
-    .InputDataWidth ( MXCoreTCDMDataWidth )
-  ) i_mxcore_engine (
+  mxcore_engine i_mxcore_engine (
     .clk_i            ( clk_i                 ),
     .rst_ni           ( rst_ni                ),
     .clear_i          ( clear_i               ),
@@ -46,11 +42,7 @@ module mxcore_hwpe_engine
     .preload_bias_i   ( preload_bias_i        ),
     .sbmat_lt_bw_i    ( ctrl_i.sbmat_lt_bw    ),
     .rnd_mode_i       ( ctrl_i.rnd_mode       ),
-    .op_i             ( ctrl_i.op             ),
-    .op_mod_i         ( ctrl_i.op_mod         ),
     .src_fmt_i        ( ctrl_i.src_fmt        ),
-    .int_fmt_i        ( fpnew_pkg::INT8       ),
-    .dst_fmt_i        ( ctrl_i.dst_fmt        ),
     .iter_count_i     ( ctrl_i.iter_count     ),
     .preload_i        ( ctrl_i.preload        ),
     .compute_en_i     ( ctrl_i.compute_en     ),

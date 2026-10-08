@@ -80,37 +80,37 @@ module mxcore_hwpe_top
   );
 
   hwpe_stream_intf_stream #(
-    .DATA_WIDTH ( MXCoreVectorDataWidth   )
+    .DATA_WIDTH ( 256 )
   ) mxcore_engine_vector_a (
     .clk ( clk_i )
   );
 
   hwpe_stream_intf_stream #(
-    .DATA_WIDTH ( MXCoreScaleDataWidth    )
+    .DATA_WIDTH ( 8 )
   ) mxcore_engine_scale_a (
     .clk ( clk_i )
   );
 
   hwpe_stream_intf_stream #(
-    .DATA_WIDTH ( MXCoreEngineResultDataWidth )
+    .DATA_WIDTH ( 1024 )
   ) mxcore_engine_result (
     .clk ( clk_i )
   );
 
   hwpe_stream_intf_stream #(
-    .DATA_WIDTH ( MXCoreQuantResultDataWidth )
+    .DATA_WIDTH ( 256 )
   ) mxcore_mxfp8_result (
     .clk  ( clk_i )
   );
 
   hwpe_stream_intf_stream #(
-    .DATA_WIDTH ( MXCoreQuantScaleDataWidth )
+    .DATA_WIDTH ( 8 )
   ) mxcore_mx_result_scale (
     .clk  ( clk_i )
   );
 
   hwpe_stream_intf_stream #(
-    .DATA_WIDTH ( MXCoreBF16ResultDataWidth )
+    .DATA_WIDTH ( 512 )
   ) mxcore_bf16_quant_result (
     .clk  ( clk_i )
   );
@@ -122,13 +122,13 @@ module mxcore_hwpe_top
   );
 
   hwpe_stream_intf_stream #(
-    .DATA_WIDTH ( MXCoreEngineResultDataWidth )
+    .DATA_WIDTH ( 1024 )
   ) engine_result_to_quantizer (
     .clk ( clk_i )
   );
 
   hwpe_stream_intf_stream #(
-    .DATA_WIDTH ( MXCoreEngineResultDataWidth )
+    .DATA_WIDTH ( 1024 )
   ) engine_result_to_fifo (
     .clk ( clk_i )
   );
@@ -148,11 +148,7 @@ module mxcore_hwpe_top
 
   // ---------------------- BEGIN: Broadcast Input Buffers  --------------------- //
   // Matrix A Buffer
-  mxcore_hwpe_fifo_buffer #(
-    .InputDataWidth   ( MXCoreTCDMDataWidth   ),
-    .OutputDataWidth  ( MXCoreVectorDataWidth ),
-    .FifoDepth        ( 2                     )
-  ) i_vector_a_buffer (
+  mxcore_hwpe_fifo_buffer i_vector_a_buffer (
     .clk_i  ( clk_i                         ),
     .rst_ni ( rst_ni                        ),
     .clear_i( clear                         ),
@@ -161,18 +157,12 @@ module mxcore_hwpe_top
   );
 
   // Scale A Buffer
-  mxcore_hwpe_fifo_scale_buffer #(
-    .InputDataWidth   ( MXCoreTCDMDataWidth     ),
-    .OutputDataWidth  ( MXCoreScaleDataWidth    ),
-    .ReuseFactor      ( Reuse                   ),
-    .ScaleFactor      ( BlockSize / VectorSize  ),
-    .FifoDepth        ( 2                       )
-  ) i_scale_a_buffer (
-    .clk_i              ( clk_i                         ),
-    .rst_ni             ( rst_ni                        ),
-    .clear_i            ( clear                         ),
-    .data_i             ( mxcore_scale_a.sink           ),
-    .data_o             ( mxcore_engine_scale_a.source  )
+  mxcore_hwpe_fifo_scale_buffer i_scale_a_buffer (
+    .clk_i   ( clk_i                         ),
+    .rst_ni  ( rst_ni                        ),
+    .clear_i ( clear                         ),
+    .data_i  ( mxcore_scale_a.sink           ),
+    .data_o  ( mxcore_engine_scale_a.source  )
   );
   // ---------------------- END: Broadcast Input Buffers  ----------------------- //
 
@@ -221,11 +211,7 @@ module mxcore_hwpe_top
   assign mxcore_engine_result.ready       = quantize_any ? engine_result_to_quantizer.ready : engine_result_to_fifo.ready;
 
   // ------------------------- MX Result Quantizer ----------------------------- //
-  mxcore_hwpe_block_quantizer #(
-    .BlockSize         ( BlockSize                   ),
-    .ScaleWidth        ( SCALE_WIDTH                 ),
-    .InputDataWidth    ( MXCoreEngineResultDataWidth )
-  ) i_result_quantizer (
+  mxcore_hwpe_block_quantizer i_result_quantizer (
     .clk_i              ( clk_i                           ),
     .rst_ni             ( rst_ni                          ),
     .block_poison_i     ( engine_ctrl.block_poison_enable ),
@@ -240,9 +226,9 @@ module mxcore_hwpe_top
   // ----------------------- MXCore Result FIFO Buffers ------------------------ //
   // Quantized Result Buffer
   mxcore_hwpe_result_fifo_buffer #(
-    .InputDataWidth     ( MXCoreQuantResultDataWidth  ),
-    .OutputDataWidth    ( MXCoreTCDMDataWidth         ),
-    .FifoDepth          ( 2                           )
+    .InputDataWidth ( 256 ),
+    .NFifo          ( 2   ),
+    .PopCount       ( 1   )
   ) i_result_mx_buffer (
     .clk_i    ( clk_i                           ),
     .rst_ni   ( rst_ni                          ),
@@ -251,11 +237,7 @@ module mxcore_hwpe_top
     .data_o   ( mxcore_quantized_result.source  )
   );
   // MX Result Block Scale Buffer
-  mxcore_hwpe_result_scale_fifo_buffer #(
-    .InputDataWidth     ( MXCoreQuantScaleDataWidth ),
-    .OutputDataWidth    ( MXCoreTCDMDataWidth       ),
-    .FifoDepth          ( 2                         )
-  ) i_result_scale_mx_buffer (
+  mxcore_hwpe_result_scale_fifo_buffer i_result_scale_mx_buffer (
     .clk_i                  ( clk_i                               ),
     .rst_ni                 ( rst_ni                              ),
     .clear_i                ( clear                               ),
@@ -266,9 +248,9 @@ module mxcore_hwpe_top
   );
   // BF16 Result Buffer
   mxcore_hwpe_result_fifo_buffer #(
-    .InputDataWidth     ( MXCoreBF16ResultDataWidth   ),
-    .OutputDataWidth    ( MXCoreTCDMDataWidth         ),
-    .FifoDepth          ( 2                           )
+    .InputDataWidth ( 512 ),
+    .NFifo          ( 1   ),
+    .PopCount       ( 1   )
   ) i_result_bf16_buffer (
     .clk_i    ( clk_i                           ),
     .rst_ni   ( rst_ni                          ),
@@ -278,9 +260,9 @@ module mxcore_hwpe_top
   );
   // Non-Quantized Result Buffer
   mxcore_hwpe_result_fifo_buffer #(
-    .InputDataWidth     ( MXCoreEngineResultDataWidth ),
-    .OutputDataWidth    ( MXCoreTCDMDataWidth         ),
-    .FifoDepth          ( 2                           )
+    .InputDataWidth ( 1024  ),
+    .NFifo          ( 1     ),
+    .PopCount       ( 2     )
   ) i_result_buffer (
     .clk_i    ( clk_i                       ),
     .rst_ni   ( rst_ni                      ),

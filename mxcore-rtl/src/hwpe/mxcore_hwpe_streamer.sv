@@ -12,7 +12,6 @@ module mxcore_hwpe_streamer
   import hwpe_stream_package::*;
   import hci_package::*;
 #(
-    parameter int unsigned  TCDMDataWidth = 32,
     localparam int unsigned REALIGN       = 0
 ) (
     // Global Signals

@@ -6,10 +6,7 @@
 
 `include "common_cells/registers.svh"
 
-module mxcore_reuse_counters
-#(
-  parameter int unsigned  Reuse = 64
-) (
+module mxcore_reuse_counters (
   // Global Signals
   input  logic          clk_i,
   input  logic          rst_ni,
@@ -24,6 +21,8 @@ module mxcore_reuse_counters
   output logic          last_iter_o,
   output logic          tile_end_o
 );
+
+  localparam int unsigned Reuse = 64;
 
   logic [15:0] in_count_d, in_count_q;
   logic [15:0] out_count_d, out_count_q;

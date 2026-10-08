@@ -6,23 +6,15 @@
 
 package mxcore_hwpe_package;
   import fpnew_pkg::*;
-  import fpnew_mxdotp_multi_pkg::*;
-  import mxcore_package::*;
 
   // HWPE Configuration
   parameter int unsigned NumCores               = 9;
-  parameter int unsigned NumContext             = `ifdef N_CONTEXT `N_CONTEXT `else 2 `endif;
+  parameter int unsigned NumContext             = 2;
   parameter int unsigned IdWidth                = 3;
   parameter int unsigned MXCoreIoRegs           = 16;
 
-  // Input/Output Datawidths
-  parameter int unsigned MXCoreEngineResultDataWidth  = NPE*DST_WIDTH;
-  parameter int unsigned MXCoreQuantResultDataWidth   = NPE*SRC_WIDTH;
-  parameter int unsigned MXCoreBF16ResultDataWidth    = NPE*16;
-  parameter int unsigned MXCoreQuantScaleDataWidth    = (NPE/BlockSize)*SCALE_WIDTH;
-
   // TCDM Bandwidth available to MXCore
-  parameter int unsigned MXCoreTCDMDataWidth           = `ifdef TCDM_BW `TCDM_BW `else 512 `endif;
+  parameter int unsigned MXCoreTCDMDataWidth          = 512;
 
   // Register File Map
   parameter int unsigned MXCoreRegVectorAPtr          = 0;   // Vector A Pointer

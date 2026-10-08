@@ -6,13 +6,7 @@
 
 `include "common_cells/registers.svh"
 
-module mxcore_hwpe_fifo_buffer #(
-  parameter int unsigned InputDataWidth      = 32,
-  parameter int unsigned OutputDataWidth     = 32,
-  parameter int unsigned FifoDepth           = 8,
-  parameter int unsigned LatchFifo           = 1,
-  parameter int unsigned LatchFifoTestWrap   = 0
-) (
+module mxcore_hwpe_fifo_buffer (
   // Global Signals
   input logic                       clk_i,
   input logic                       rst_ni,
@@ -23,37 +17,32 @@ module mxcore_hwpe_fifo_buffer #(
 );
 
   hwpe_stream_intf_stream #(
-    .DATA_WIDTH(InputDataWidth)
+    .DATA_WIDTH(512)
   ) data_fifo (
     .clk ( clk_i    )
   );
 
-  localparam int unsigned ReuseFactor = InputDataWidth / OutputDataWidth;
-
-  logic [$clog2(ReuseFactor)-1:0]  reuse_cnt_d, reuse_cnt_q;
+  logic reuse_cnt_d, reuse_cnt_q;
 
   always_comb begin
     // Default Assignments
     reuse_cnt_d     = reuse_cnt_q;
-    data_o.data     = data_fifo.data[(reuse_cnt_q)*OutputDataWidth+:OutputDataWidth];
-    data_o.strb     = data_fifo.strb[(reuse_cnt_q)*OutputDataWidth/8+:OutputDataWidth/8];
+    data_o.data     = data_fifo.data[reuse_cnt_q*256+:256];
+    data_o.strb     = data_fifo.strb[reuse_cnt_q*32+:32];
     data_o.valid    = data_fifo.valid;
-    data_fifo.ready = (reuse_cnt_q == ReuseFactor - 1) ? data_o.ready : 0;
+    data_fifo.ready = reuse_cnt_q ? data_o.ready : 1'b0;
     if (data_o.ready && data_fifo.valid) begin
-      reuse_cnt_d = reuse_cnt_q + 1;
-      if (reuse_cnt_q == ReuseFactor - 1) begin
-          reuse_cnt_d = '0;
-      end
+      reuse_cnt_d = !reuse_cnt_q;
     end
   end
 
   `FFARNC(reuse_cnt_q, reuse_cnt_d, clear_i, '0)
 
   hwpe_stream_fifo #(
-    .DATA_WIDTH           ( InputDataWidth    ),
-    .FIFO_DEPTH           ( FifoDepth         ),
-    .LATCH_FIFO           ( LatchFifo         ),
-    .LATCH_FIFO_TEST_WRAP ( LatchFifoTestWrap )
+    .DATA_WIDTH           ( 512 ),
+    .FIFO_DEPTH           ( 2   ),
+    .LATCH_FIFO           ( 1   ),
+    .LATCH_FIFO_TEST_WRAP ( 0   )
   ) i_data_fifo (
     .clk_i      ( clk_i     ),
     .rst_ni     ( rst_ni    ),

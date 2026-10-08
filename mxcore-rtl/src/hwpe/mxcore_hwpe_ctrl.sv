@@ -8,7 +8,6 @@
 
 module mxcore_hwpe_ctrl
   import fpnew_pkg::*;
-  import fpnew_mxdotp_multi_pkg::*;
   import mxcore_package::*;
   import mxcore_hwpe_package::*;
   import hwpe_ctrl_package::*;
@@ -34,13 +33,11 @@ module mxcore_hwpe_ctrl
   hwpe_ctrl_intf_periph.slave                     periph
 );
 
-  localparam int unsigned LOG_CONTEXT = NumContext > 1 ? $clog2(NumContext) : 1;
-
   logic                 slave_clear, stream_clear;
   ctrl_slave_t          slave_ctrl;
   flags_slave_t         slave_flags;
   ctrl_regfile_t        reg_file;
-  logic [LOG_CONTEXT:0] counter_pending;
+  logic [1:0]           counter_pending;
   /* HWPE Controller Slave Port + Register File */
   hwpe_ctrl_slave #(
     .N_CORES        ( NumCores        ),
@@ -69,14 +66,12 @@ module mxcore_hwpe_ctrl
   logic [31:0]  A_TILE_SIZE_REG, B_TILE_SIZE_REG, PRELOAD_TILE_SIZE_REG, RESULT_TILE_SIZE_REG, RESULT_SCALE_TILE_SIZE_REG;
   logic [31:0]  A_MAT_SIZE, B_MAT_SIZE, SA_MAT_SIZE, SB_MAT_SIZE, RESULT_SCALE_MAT_SIZE;
   logic [31:0]  A_ROW_TILE_SIZE, SA_ROW_TILE_SIZE;
-  logic [5:0]   SA_VEC_PER_BLOCK;
   logic [31:0]  TOT_TILES;
   logic [31:0]  ITER_COUNT;
   assign A_ROW_TILES                = reg_file.hwpe_params[MXCoreRegTileCounts][3:0];
   assign B_COL_TILES                = reg_file.hwpe_params[MXCoreRegTileCounts][8:4];
   assign INNER_TILES                = reg_file.hwpe_params[MXCoreRegTileCounts][15:9];
   assign INNER_BLOCKS               = reg_file.hwpe_params[MXCoreRegTileCounts][22:16];
-  assign SA_VEC_PER_BLOCK           = reg_file.hwpe_params[MXCoreRegTileCounts][28:23];
   assign A_TILE_SIZE_REG            = reg_file.hwpe_params[MXCoreRegATileSize];
   assign B_TILE_SIZE_REG            = reg_file.hwpe_params[MXCoreRegBTileSize];
   assign PRELOAD_TILE_SIZE_REG      = reg_file.hwpe_params[MXCoreRegPreloadTileSize];
@@ -85,10 +80,8 @@ module mxcore_hwpe_ctrl
   assign TOT_TILES                  = A_ROW_TILES * B_COL_TILES;
   assign ITER_COUNT                 = reg_file.hwpe_params[MXCoreRegIterCount];
 
-  localparam int unsigned VEC_PER_BLOCK = BlockSize / VectorSize;
-  localparam int unsigned SA_TILE_SIZE  = Reuse*SCALE_WIDTH;
-  localparam int unsigned SB_TILE_SIZE  = NPE*SCALE_WIDTH;
-  localparam bit          SATILE_GT_BW  = (SA_TILE_SIZE > MXCoreTCDMDataWidth);
+  localparam int unsigned SA_TILE_SIZE  = 512;
+  localparam int unsigned SB_TILE_SIZE  = 256;
 
   logic SBMAT_LT_BW;
   always_comb begin
@@ -169,29 +162,16 @@ module mxcore_hwpe_ctrl
     B_D3_STRIDE         = '0;
     B_DIM_ENABLE        = 4'b0001;
     // // ----------------------- Scale Matrix A ----------------------- // //
-    if (SATILE_GT_BW) begin
-      SCALE_A_TOT_LEN     = (SA_TILE_SIZE * SA_VEC_PER_BLOCK * INNER_BLOCKS * B_COL_TILES) / MXCoreTCDMDataWidth;
-      SCALE_A_D0_STRIDE   = MXCoreTCDMDataWidth / 8;
-      SCALE_A_D0_LEN      = SA_TILE_SIZE / MXCoreTCDMDataWidth;
-      SCALE_A_D1_STRIDE   = '0;
-      SCALE_A_D1_LEN      = SA_VEC_PER_BLOCK;
-      SCALE_A_D2_STRIDE   = SA_TILE_SIZE / 8;
-      SCALE_A_D2_LEN      = INNER_BLOCKS;
-      SCALE_A_D3_STRIDE   = '0;
-      SCALE_A_D3_LEN      = B_COL_TILES;
-      SCALE_A_DIM_ENABLE  = 4'b0111;
-    end else begin
-      SCALE_A_TOT_LEN     = (SA_MAT_SIZE * B_COL_TILES + MXCoreTCDMDataWidth - 1) / MXCoreTCDMDataWidth;
-      SCALE_A_D0_STRIDE   = MXCoreTCDMDataWidth / 8;
-      SCALE_A_D0_LEN      = (SA_ROW_TILE_SIZE + MXCoreTCDMDataWidth - 1) / MXCoreTCDMDataWidth;
-      SCALE_A_D1_STRIDE   = '0;
-      SCALE_A_D1_LEN      = B_COL_TILES;
-      SCALE_A_D2_STRIDE   = SA_ROW_TILE_SIZE / 8;
-      SCALE_A_D2_LEN      = A_ROW_TILES;
-      SCALE_A_D3_STRIDE   = '0;
-      SCALE_A_D3_LEN      = '0;
-      SCALE_A_DIM_ENABLE  = 4'b0011;
-    end
+    SCALE_A_TOT_LEN     = (SA_MAT_SIZE * B_COL_TILES + MXCoreTCDMDataWidth - 1) / MXCoreTCDMDataWidth;
+    SCALE_A_D0_STRIDE   = MXCoreTCDMDataWidth / 8;
+    SCALE_A_D0_LEN      = (SA_ROW_TILE_SIZE + MXCoreTCDMDataWidth - 1) / MXCoreTCDMDataWidth;
+    SCALE_A_D1_STRIDE   = '0;
+    SCALE_A_D1_LEN      = B_COL_TILES;
+    SCALE_A_D2_STRIDE   = SA_ROW_TILE_SIZE / 8;
+    SCALE_A_D2_LEN      = A_ROW_TILES;
+    SCALE_A_D3_STRIDE   = '0;
+    SCALE_A_D3_LEN      = '0;
+    SCALE_A_DIM_ENABLE  = 4'b0011;
     // // ----------------------- Scale Matrix B ----------------------- // //
     if (SBMAT_LT_BW) begin
       SCALE_B_TOT_LEN     = 1;
