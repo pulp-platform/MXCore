@@ -108,47 +108,22 @@ module mxcore_pe
     .we_b_i     ( bias_write_enable_i           )
   );
 
-  fpnew_mxdotp_multi #(
-    .FpSrcFmtConfig   ( EnMxdotpSrcFpFmtConfig  ),
-    .IntSrcFmtConfig  ( EnMxdotpSrcIntFmtConfig ),
-    .FpDstFmtConfig   ( EnMxdotpDstFpFmtConfig  ),
-    .LaneWidth        ( LaneWidth               ),
-    .VectorSize       ( VectorSize              ),
-    .NumPipeRegs      ( NumPipeRegs             ),
-    .PipeConfig       ( PipeConfig              ),
-    .TagType          ( TagType                 ),
-    .AuxType          ( AuxType                 )
-  ) i_fpnew_mxdotp_multi (
-    .clk_i                 ( clk_i          ),
-    .rst_ni                ( rst_ni         ),
-    .operands_a_i          ( vector_a_i     ),
-    .operands_b_i          ( vector_b       ),
-    .operands_a_fp6_rem_i  ( '0             ),
-    .operands_b_fp6_rem_i  ( '0             ),
-    .operands_c_i          ( operands_c     ),
-    .operand_d_i           ( operand_d      ),
-    .is_boxed_i            ( '1             ),
-    .rnd_mode_i            ( rnd_mode_i     ),
-    .op_i                  ( op_i           ),
-    .op_mod_i              ( op_mod_i       ),
-    .src_fmt_i             ( src_fmt_i      ),
-    .int_fmt_i             ( int_fmt_i      ),
-    .dst_fmt_i             ( dst_fmt_i      ),
-    .tag_i                 ( '0             ),
-    .mask_i                ( 1'b0           ),
-    .aux_i                 ( '0             ),
-    .in_valid_i            ( in_valid_i     ),
-    .in_ready_o            ( in_ready_o     ),
-    .flush_i               ( flush_i        ),
-    .out_valid_o           ( out_valid_o    ),
-    .out_ready_i           ( out_ready_i    ),
-    .result_o              ( mxdotp_result  ),
-    .status_o              (                ),
-    .extension_bit_o       (                ),
-    .tag_o                 (                ),
-    .mask_o                (                ),
-    .aux_o                 (                ),
-    .busy_o                ( busy_o         )
+  fpnew_mxdotp_multi_opt i_fpnew_mxdotp_multi (
+    .clk_i        ( clk_i         ),
+    .rst_ni       ( rst_ni        ),
+    .operands_a_i ( vector_a_i    ),
+    .operands_b_i ( vector_b      ),
+    .operands_c_i ( operands_c    ),
+    .operand_d_i  ( operand_d     ),
+    .rnd_mode_i   ( rnd_mode_i    ),
+    .src_fmt_i    ( src_fmt_i     ),
+    .in_valid_i   ( in_valid_i    ),
+    .in_ready_o   ( in_ready_o    ),
+    .flush_i      ( flush_i       ),
+    .result_o     ( mxdotp_result ),
+    .out_valid_o  ( out_valid_o   ),
+    .out_ready_i  ( out_ready_i   ),
+    .busy_o       ( busy_o        )
   );
 
   assign tile_result_o = tile_result;

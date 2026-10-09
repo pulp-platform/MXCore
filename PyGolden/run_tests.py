@@ -21,7 +21,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from PyGolden.tests import gemm_mxcore_vector_gen
+from PyGolden.tests import gemm_mxcore_vector_gen, gemm_mxcore_multi_job_gen
 from PyGolden import mxcore_gemm_functions
 
 # ── Colour helpers (ANSI) ────────────────────────────────────────────────────
@@ -152,10 +152,38 @@ def _shape_tag(t, defaults):
             f"_M{t['M']}_K{t['K']}_N{t['N']}_BS{defaults['block_size']}")
 
 
+def _output_fmt(t):
+    return "BF16" if t.get("quantize_bf16", 0) else ("MXFP8" if t["quantize"] else "FP32")
+
+
+def _jobs_name(t, defaults):
+    return f"{_shape_tag(t, defaults)}_{_output_fmt(t)}_P{t.get('preload', 0)}_J{t['num_jobs']}"
+
+
+def _jobs_file(t, defaults):
+    return TV_ROOT / "multicontext" / f"jobs_{_jobs_name(t, defaults)}.txt"
+
+
 # ── Test-vector generation (golden model) ────────────────────────────────────
 def generate_testvectors(tests, defaults):
     """Generate any missing memory/result files for the given tests via PyGolden."""
-    shapes = {(t["data_type"], t["vector_size"], t["npe"], t["reuse"], t["M"], t["K"], t["N"], t.get("preload", 0)) for t in tests}
+    for t in [t for t in tests if t.get("jobs_file", 0)]:
+        if _jobs_file(t, defaults).exists():
+            continue
+        print(f"{C_DIM}Generating multi-context job sequence {_jobs_name(t, defaults)}...{C_RESET}", file=sys.stderr)
+        mxcore_gemm_functions.MEMORY_EXPORT = True
+        jobs = [dict(data_type=t["data_type"], mdim=t["M"], kdim=t["K"], ndim=t["N"], output=_output_fmt(t),
+                     preload=bool(t.get("preload", 0)), seed=MAIN_SEED + j) for j in range(t["num_jobs"])]
+        gemm_mxcore_multi_job_gen(
+            jobs,
+            _jobs_name(t, defaults),
+            folder_path=str(TV_ROOT),
+            mxdotp_vector_size=t["vector_size"],
+            num_mx_units=t["npe"],
+            num_out_buffers=t["reuse"],
+            block_size=defaults["block_size"],
+        )
+    shapes = {(t["data_type"], t["vector_size"], t["npe"], t["reuse"], t["M"], t["K"], t["N"], t.get("preload", 0)) for t in tests if not t.get("jobs_file", 0)}
     mxcore_gemm_functions.MEMORY_EXPORT = True
     for data_type, vs, npe, reuse, M, K, N, preload in sorted(shapes):
         tag = f"{data_type}_VS{vs}_MX{npe}_O{reuse}_M{M}_K{K}_N{N}_BS{defaults['block_size']}"
@@ -198,6 +226,8 @@ def generate_compile_tcl(cfg, defaults, workdir):
         res_file = str(tv_dir / "result_mx" / f"result_{tag}.txt")
     else:
         res_file = str(tv_dir / "result" / f"result_{tag}.txt")
+    if cfg.get("jobs_file", 0):
+        mem_file = res_file = str(_jobs_file(cfg, defaults))
 
     bender_args = [
         "-t", "rtl",
@@ -227,6 +257,8 @@ def generate_compile_tcl(cfg, defaults, workdir):
         "--define", f"NUM_JOBS={cfg.get('num_jobs', 1)}",
         "--define", "HCI_ASSERT_DELAY=#41ps",
     ]
+    if cfg.get("jobs_file", 0):
+        bender_args += ["--define", "MULTICTX", "--define", "L1_KIB=128", "--define", "DMA_BW=64"]
 
     cmd = [str(REPO_ROOT / "install" / "bender" / "bender"), "script", "vsim"] + bender_args
     result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, cwd=str(REPO_ROOT))
@@ -240,6 +272,8 @@ def generate_compile_tcl(cfg, defaults, workdir):
         f'+define+SRC_FMT="{data_type}"',
         f'+define+DST_FMT="FP32"',
     ]
+    if cfg.get("jobs_file", 0):
+        string_defines.append(f'+define+JOBS_FILE="{mem_file}"')
     inject = " \\\n    ".join(string_defines) + " \\"
     tcl_content = tcl_content.replace(
         '+define+EN_FP8=1',
@@ -264,6 +298,8 @@ def run_test(cfg, defaults):
         name += "_preload"
     if cfg.get("num_jobs", 1) > 1:
         name += f"_jobs{cfg['num_jobs']}"
+    if cfg.get("jobs_file", 0):
+        name += "_mc"
 
     tile_mode = classify_tile(M, N, reuse, npe)
     timeout = cfg.get("timeout_seconds", defaults.get("timeout_seconds", 120))
@@ -277,7 +313,7 @@ def run_test(cfg, defaults):
         "name": name, "M": M, "K": K, "N": N,
         "vector_size": vs, "npe": npe, "reuse": reuse, "data_type": data_type,
         "no_stalls": cfg["no_stalls"],
-        "preload": cfg.get("preload", 0), "num_jobs": cfg.get("num_jobs", 1),
+        "preload": cfg.get("preload", 0), "num_jobs": cfg.get("num_jobs", 1), "jobs_file": cfg.get("jobs_file", 0),
         "quantize": quantize, "quantize_bf16": quantize_bf16, "tile_mode": tile_mode,
         "status": "UNKNOWN", "reason": "",
     }
@@ -402,7 +438,8 @@ def _print_table(title, results_subset):
             st = f"{C_BG_RED}{C_WHITE}{C_BOLD}  FAIL  {C_RESET}"
 
         reason = r["reason"][:45]
-        print(f"  {hw:<19} {r['data_type']:<5} {dims:<16} {pre:<4} {r['num_jobs']:<5} {stall:<6} {tc}{r['tile_mode']:<12}{C_RESET} {st}  {C_DIM}{reason}{C_RESET}")
+        jobs = f"{r['num_jobs']}mc" if r["jobs_file"] else str(r["num_jobs"])
+        print(f"  {hw:<19} {r['data_type']:<5} {dims:<16} {pre:<4} {jobs:<5} {stall:<6} {tc}{r['tile_mode']:<12}{C_RESET} {st}  {C_DIM}{reason}{C_RESET}")
 
 
 def print_results(results):
