@@ -5,13 +5,15 @@
 // Jayanth Jonnalagadda <jjonnalagadd@iis.ee.ethz.ch>
 
 module block_scale #(
-  parameter bit          Encoding    = 0,     // 0 - E5M2, 1 - E4M3
   parameter int unsigned BlockSize   = 32,
   parameter int unsigned ScaleWidth  = 8
 ) (
   // Global Signals
   input  logic                        clk_i,
   input  logic                        rst_ni,
+  // Control
+  input  logic                        quantize_mxfp8alt_i,
+  input  logic                        quantize_mxfp4_i,
   // Input FP32 Block
   input  logic [BlockSize*32-1:0]    fp32_block_i,
   // Output Block Scale
@@ -22,7 +24,7 @@ module block_scale #(
   localparam int FP32_BIAS  = 127;
   localparam int E5M2_EMAX  = 15;
   localparam int E4M3_EMAX  = 8;
-  localparam int MXFP8_EMAX = (Encoding == 0) ? E5M2_EMAX : E4M3_EMAX;
+  localparam int E2M1_EMAX  = 2;
 
   localparam int SCALE_EMAX = (2 ** (ScaleWidth-1)) - 1;
   localparam int SCALE_BIAS = (2 ** (ScaleWidth-1)) - 1;
@@ -72,7 +74,7 @@ module block_scale #(
   endgenerate
   assign max_exponent = stage[STAGES][0];
 
-  assign scaled_exponent  = $signed({2'b00, max_exponent}) - FP32_BIAS - MXFP8_EMAX;
+  assign scaled_exponent  = $signed({2'b00, max_exponent}) - FP32_BIAS - (quantize_mxfp4_i ? E2M1_EMAX : quantize_mxfp8alt_i ? E4M3_EMAX : E5M2_EMAX);
   assign scale_overflow   = scaled_exponent > SCALE_EMAX;
   assign scale_underflow  = scaled_exponent < -SCALE_EMAX;
 

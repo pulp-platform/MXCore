@@ -32,7 +32,9 @@ num_compute_units ?= 32
 num_out_buffers ?= 64
 num_pipe_regs ?= 4
 tcdm_bw ?= 512
-# Output Quantization
+# Output Quantization (Highest Wins: BF16 > MXFP8 E5M2 > MXFP8 E4M3 > MXFP4)
+quantize_mxfp4 ?= 0
+quantize_mxfp8alt ?= 0
 quantize_mxfp8 ?= 1
 quantize_bf16 ?= 0
 # Accumulator Preload
@@ -61,6 +63,10 @@ ifeq ($(quantize_bf16), 1)
 	RES_DIR		     ?= ${TV_DIR}/result_bf16
 else ifeq ($(quantize_mxfp8), 1)
 	RES_DIR		     ?= ${TV_DIR}/result_mx
+else ifeq ($(quantize_mxfp8alt), 1)
+	RES_DIR		     ?= ${TV_DIR}/result_mxfp8alt
+else ifeq ($(quantize_mxfp4), 1)
+	RES_DIR		     ?= ${TV_DIR}/result_mxfp4
 else
 	RES_DIR			 ?= ${TV_DIR}/result
 endif
@@ -73,7 +79,7 @@ vlog_defs := $(foreach fmt,$(ALL_FORMATS), \
 vlog_defs += -DMEM_FILE="\"$(MEM_DIR)/$(memory_file)\"" -DRES_FILE="\"$(RES_DIR)/$(result_file)\""
 vlog_defs += -DSRC_FMT="\"$(src_fmt)\"" -DDST_FMT="\"$(dst_fmt)\""
 vlog_defs += -DVECTOR_SIZE=$(vector_size) -DNPE=$(num_compute_units) -DREUSE=$(num_out_buffers) -DNUM_PIPE_REGS=$(num_pipe_regs) -DTCDM_BW=$(tcdm_bw)
-vlog_defs += -DM=$(mdim) -DK=$(kdim) -DN=$(ndim) -DQUANTIZE_MXFP8=$(quantize_mxfp8) -DQUANTIZE_BF16=$(quantize_bf16) -DPRELOAD=$(preload)
+vlog_defs += -DM=$(mdim) -DK=$(kdim) -DN=$(ndim) -DQUANTIZE_MXFP4=$(quantize_mxfp4) -DQUANTIZE_MXFP8ALT=$(quantize_mxfp8alt) -DQUANTIZE_MXFP8=$(quantize_mxfp8) -DQUANTIZE_BF16=$(quantize_bf16) -DPRELOAD=$(preload)
 vlog_defs += -DPROB_STALL=$(prob_stall) -DNO_STALLS=$(no_stalls)
 ifdef preload_threshold
 	vlog_defs += -DPRELOAD_THRESHOLD=$(preload_threshold)
@@ -83,7 +89,7 @@ ifdef n_context
 	vlog_defs += -DN_CONTEXT=$(n_context)
 endif
 ifeq ($(multictx), 1)
-	output_fmt := $(if $(filter 1,$(quantize_bf16)),BF16,$(if $(filter 1,$(quantize_mxfp8)),MXFP8,FP32))
+	output_fmt := $(if $(filter 1,$(quantize_bf16)),BF16,$(if $(filter 1,$(quantize_mxfp8)),MXFP8,$(if $(filter 1,$(quantize_mxfp8alt)),MXFP8ALT,$(if $(filter 1,$(quantize_mxfp4)),MXFP4,FP32))))
 	jobs_file ?= ${ROOT_DIR}/testvectors/multicontext/jobs_${src_fmt}_VS${vector_size}_MX${num_compute_units}_O${num_out_buffers}_M${mdim}_K${kdim}_N${ndim}_BS${block_size}_${output_fmt}_P${preload}_J${num_jobs}.txt
 	vlog_defs += -DMULTICTX -DJOBS_FILE="\"$(jobs_file)\"" -DL1_KIB=$(l1_kib) -DDMA_BW=$(dma_bw)
 endif

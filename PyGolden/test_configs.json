@@ -1987,6 +1987,878 @@
       "vector_size": 32,
       "npe": 32,
       "reuse": 64,
+      "data_type": "FP8",
+      "M": 64,
+      "K": 32,
+      "N": 32,
+      "quantize": 0,
+      "quantize_mxfp4": 1,
+      "no_stalls": 0,
+      "tags": [
+        "ci",
+        "mxfp4"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 64,
+      "K": 32,
+      "N": 32,
+      "quantize": 0,
+      "quantize_mxfp4": 1,
+      "no_stalls": 1,
+      "tags": [
+        "ci",
+        "mxfp4"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 64,
+      "K": 32,
+      "N": 32,
+      "quantize": 0,
+      "quantize_mxfp4": 1,
+      "no_stalls": 0,
+      "preload": 1,
+      "tags": [
+        "ci",
+        "mxfp4",
+        "preload"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 64,
+      "K": 32,
+      "N": 32,
+      "quantize": 0,
+      "quantize_mxfp4": 1,
+      "no_stalls": 1,
+      "preload": 1,
+      "tags": [
+        "ci",
+        "mxfp4",
+        "preload"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "quantize_mxfp4": 1,
+      "no_stalls": 0,
+      "tags": [
+        "ci",
+        "mxfp4"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "quantize_mxfp4": 1,
+      "no_stalls": 1,
+      "tags": [
+        "ci",
+        "mxfp4"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "quantize_mxfp4": 1,
+      "no_stalls": 0,
+      "preload": 1,
+      "tags": [
+        "ci",
+        "mxfp4",
+        "preload"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "quantize_mxfp4": 1,
+      "no_stalls": 1,
+      "preload": 1,
+      "tags": [
+        "ci",
+        "mxfp4",
+        "preload"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 64,
+      "K": 128,
+      "N": 64,
+      "quantize": 0,
+      "quantize_mxfp4": 1,
+      "no_stalls": 0,
+      "preload": 0,
+      "num_jobs": 4,
+      "jobs_file": 1,
+      "tags": [
+        "ci",
+        "mxfp4",
+        "multictx"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 64,
+      "K": 128,
+      "N": 64,
+      "quantize": 0,
+      "quantize_mxfp4": 1,
+      "no_stalls": 1,
+      "preload": 0,
+      "num_jobs": 4,
+      "jobs_file": 1,
+      "tags": [
+        "ci",
+        "mxfp4",
+        "multictx"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 64,
+      "K": 128,
+      "N": 64,
+      "quantize": 0,
+      "quantize_mxfp4": 1,
+      "no_stalls": 0,
+      "preload": 1,
+      "num_jobs": 4,
+      "jobs_file": 1,
+      "tags": [
+        "ci",
+        "mxfp4",
+        "multictx",
+        "preload"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 64,
+      "K": 128,
+      "N": 64,
+      "quantize": 0,
+      "quantize_mxfp4": 1,
+      "no_stalls": 1,
+      "preload": 1,
+      "num_jobs": 4,
+      "jobs_file": 1,
+      "tags": [
+        "ci",
+        "mxfp4",
+        "multictx",
+        "preload"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 64,
+      "K": 64,
+      "N": 32,
+      "quantize": 0,
+      "quantize_mxfp4": 1,
+      "no_stalls": 0,
+      "tags": [
+        "ci",
+        "mxfp4"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 64,
+      "K": 64,
+      "N": 32,
+      "quantize": 0,
+      "quantize_mxfp4": 1,
+      "no_stalls": 1,
+      "tags": [
+        "ci",
+        "mxfp4"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 64,
+      "K": 64,
+      "N": 32,
+      "quantize": 0,
+      "quantize_mxfp4": 1,
+      "no_stalls": 0,
+      "preload": 1,
+      "tags": [
+        "ci",
+        "mxfp4",
+        "preload"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 64,
+      "K": 64,
+      "N": 32,
+      "quantize": 0,
+      "quantize_mxfp4": 1,
+      "no_stalls": 1,
+      "preload": 1,
+      "tags": [
+        "ci",
+        "mxfp4",
+        "preload"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "quantize_mxfp4": 1,
+      "no_stalls": 0,
+      "tags": [
+        "ci",
+        "mxfp4"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "quantize_mxfp4": 1,
+      "no_stalls": 1,
+      "tags": [
+        "ci",
+        "mxfp4"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "quantize_mxfp4": 1,
+      "no_stalls": 0,
+      "preload": 1,
+      "tags": [
+        "ci",
+        "mxfp4",
+        "preload"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "quantize_mxfp4": 1,
+      "no_stalls": 1,
+      "preload": 1,
+      "tags": [
+        "ci",
+        "mxfp4",
+        "preload"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 64,
+      "K": 128,
+      "N": 64,
+      "quantize": 0,
+      "quantize_mxfp4": 1,
+      "no_stalls": 0,
+      "preload": 0,
+      "num_jobs": 4,
+      "jobs_file": 1,
+      "tags": [
+        "ci",
+        "mxfp4",
+        "multictx"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 64,
+      "K": 128,
+      "N": 64,
+      "quantize": 0,
+      "quantize_mxfp4": 1,
+      "no_stalls": 1,
+      "preload": 0,
+      "num_jobs": 4,
+      "jobs_file": 1,
+      "tags": [
+        "ci",
+        "mxfp4",
+        "multictx"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 64,
+      "K": 128,
+      "N": 64,
+      "quantize": 0,
+      "quantize_mxfp4": 1,
+      "no_stalls": 0,
+      "preload": 1,
+      "num_jobs": 4,
+      "jobs_file": 1,
+      "tags": [
+        "ci",
+        "mxfp4",
+        "multictx",
+        "preload"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 64,
+      "K": 128,
+      "N": 64,
+      "quantize": 0,
+      "quantize_mxfp4": 1,
+      "no_stalls": 1,
+      "preload": 1,
+      "num_jobs": 4,
+      "jobs_file": 1,
+      "tags": [
+        "ci",
+        "mxfp4",
+        "multictx",
+        "preload"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 64,
+      "K": 32,
+      "N": 32,
+      "quantize": 0,
+      "quantize_mxfp8alt": 1,
+      "no_stalls": 0,
+      "tags": [
+        "ci",
+        "mxfp8alt"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 64,
+      "K": 32,
+      "N": 32,
+      "quantize": 0,
+      "quantize_mxfp8alt": 1,
+      "no_stalls": 1,
+      "tags": [
+        "ci",
+        "mxfp8alt"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 64,
+      "K": 32,
+      "N": 32,
+      "quantize": 0,
+      "quantize_mxfp8alt": 1,
+      "no_stalls": 0,
+      "preload": 1,
+      "tags": [
+        "ci",
+        "mxfp8alt",
+        "preload"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 64,
+      "K": 32,
+      "N": 32,
+      "quantize": 0,
+      "quantize_mxfp8alt": 1,
+      "no_stalls": 1,
+      "preload": 1,
+      "tags": [
+        "ci",
+        "mxfp8alt",
+        "preload"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "quantize_mxfp8alt": 1,
+      "no_stalls": 0,
+      "tags": [
+        "ci",
+        "mxfp8alt"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "quantize_mxfp8alt": 1,
+      "no_stalls": 1,
+      "tags": [
+        "ci",
+        "mxfp8alt"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "quantize_mxfp8alt": 1,
+      "no_stalls": 0,
+      "preload": 1,
+      "tags": [
+        "ci",
+        "mxfp8alt",
+        "preload"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "quantize_mxfp8alt": 1,
+      "no_stalls": 1,
+      "preload": 1,
+      "tags": [
+        "ci",
+        "mxfp8alt",
+        "preload"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 64,
+      "K": 128,
+      "N": 64,
+      "quantize": 0,
+      "quantize_mxfp8alt": 1,
+      "no_stalls": 0,
+      "preload": 0,
+      "num_jobs": 4,
+      "jobs_file": 1,
+      "tags": [
+        "ci",
+        "mxfp8alt",
+        "multictx"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 64,
+      "K": 128,
+      "N": 64,
+      "quantize": 0,
+      "quantize_mxfp8alt": 1,
+      "no_stalls": 1,
+      "preload": 0,
+      "num_jobs": 4,
+      "jobs_file": 1,
+      "tags": [
+        "ci",
+        "mxfp8alt",
+        "multictx"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 64,
+      "K": 128,
+      "N": 64,
+      "quantize": 0,
+      "quantize_mxfp8alt": 1,
+      "no_stalls": 0,
+      "preload": 1,
+      "num_jobs": 4,
+      "jobs_file": 1,
+      "tags": [
+        "ci",
+        "mxfp8alt",
+        "multictx",
+        "preload"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 64,
+      "K": 128,
+      "N": 64,
+      "quantize": 0,
+      "quantize_mxfp8alt": 1,
+      "no_stalls": 1,
+      "preload": 1,
+      "num_jobs": 4,
+      "jobs_file": 1,
+      "tags": [
+        "ci",
+        "mxfp8alt",
+        "multictx",
+        "preload"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 64,
+      "K": 64,
+      "N": 32,
+      "quantize": 0,
+      "quantize_mxfp8alt": 1,
+      "no_stalls": 0,
+      "tags": [
+        "ci",
+        "mxfp8alt"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 64,
+      "K": 64,
+      "N": 32,
+      "quantize": 0,
+      "quantize_mxfp8alt": 1,
+      "no_stalls": 1,
+      "tags": [
+        "ci",
+        "mxfp8alt"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 64,
+      "K": 64,
+      "N": 32,
+      "quantize": 0,
+      "quantize_mxfp8alt": 1,
+      "no_stalls": 0,
+      "preload": 1,
+      "tags": [
+        "ci",
+        "mxfp8alt",
+        "preload"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 64,
+      "K": 64,
+      "N": 32,
+      "quantize": 0,
+      "quantize_mxfp8alt": 1,
+      "no_stalls": 1,
+      "preload": 1,
+      "tags": [
+        "ci",
+        "mxfp8alt",
+        "preload"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "quantize_mxfp8alt": 1,
+      "no_stalls": 0,
+      "tags": [
+        "ci",
+        "mxfp8alt"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "quantize_mxfp8alt": 1,
+      "no_stalls": 1,
+      "tags": [
+        "ci",
+        "mxfp8alt"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "quantize_mxfp8alt": 1,
+      "no_stalls": 0,
+      "preload": 1,
+      "tags": [
+        "ci",
+        "mxfp8alt",
+        "preload"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 128,
+      "K": 128,
+      "N": 128,
+      "quantize": 0,
+      "quantize_mxfp8alt": 1,
+      "no_stalls": 1,
+      "preload": 1,
+      "tags": [
+        "ci",
+        "mxfp8alt",
+        "preload"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 64,
+      "K": 128,
+      "N": 64,
+      "quantize": 0,
+      "quantize_mxfp8alt": 1,
+      "no_stalls": 0,
+      "preload": 0,
+      "num_jobs": 4,
+      "jobs_file": 1,
+      "tags": [
+        "ci",
+        "mxfp8alt",
+        "multictx"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 64,
+      "K": 128,
+      "N": 64,
+      "quantize": 0,
+      "quantize_mxfp8alt": 1,
+      "no_stalls": 1,
+      "preload": 0,
+      "num_jobs": 4,
+      "jobs_file": 1,
+      "tags": [
+        "ci",
+        "mxfp8alt",
+        "multictx"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 64,
+      "K": 128,
+      "N": 64,
+      "quantize": 0,
+      "quantize_mxfp8alt": 1,
+      "no_stalls": 0,
+      "preload": 1,
+      "num_jobs": 4,
+      "jobs_file": 1,
+      "tags": [
+        "ci",
+        "mxfp8alt",
+        "multictx",
+        "preload"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP4",
+      "M": 64,
+      "K": 128,
+      "N": 64,
+      "quantize": 0,
+      "quantize_mxfp8alt": 1,
+      "no_stalls": 1,
+      "preload": 1,
+      "num_jobs": 4,
+      "jobs_file": 1,
+      "tags": [
+        "ci",
+        "mxfp8alt",
+        "multictx",
+        "preload"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
       "data_type": "FP4",
       "M": 128,
       "K": 128,

@@ -33,8 +33,10 @@ module tb_mxcore_hwpe;
 
   localparam int unsigned MX_BLOCK_SIZE = 32;
 
-  parameter bit QuantizeMXFP8  = `ifdef QUANTIZE_MXFP8 `QUANTIZE_MXFP8 `else 1 `endif;
-  parameter bit QuantizeBF16   = `ifdef QUANTIZE_BF16 `QUANTIZE_BF16 `else 0 `endif;
+  parameter bit QuantizeMXFP4    = `ifdef QUANTIZE_MXFP4 `QUANTIZE_MXFP4 `else 0 `endif;
+  parameter bit QuantizeMXFP8Alt = `ifdef QUANTIZE_MXFP8ALT `QUANTIZE_MXFP8ALT `else 0 `endif;
+  parameter bit QuantizeMXFP8    = `ifdef QUANTIZE_MXFP8 `QUANTIZE_MXFP8 `else 1 `endif;
+  parameter bit QuantizeBF16     = `ifdef QUANTIZE_BF16 `QUANTIZE_BF16 `else 0 `endif;
   parameter bit Preload        = `ifdef PRELOAD `PRELOAD `else 0 `endif;
   parameter int unsigned NumJobs = `ifdef NUM_JOBS `NUM_JOBS `else 1 `endif;
 
@@ -78,6 +80,13 @@ module tb_mxcore_hwpe;
   localparam int unsigned FP4_SRC_WIDTH   = 4;
   localparam int unsigned FP4_BLOCK_SIZE  = 2 * MX_BLOCK_SIZE;
 
+  // Output Format (Highest Quantize Bit Wins)
+  localparam bit          OutBF16       = QuantizeBF16;
+  localparam bit          OutMXFP8      = QuantizeMXFP8 && !OutBF16;
+  localparam bit          OutMXFP8Alt   = QuantizeMXFP8Alt && !QuantizeMXFP8 && !OutBF16;
+  localparam bit          OutMXFP4      = QuantizeMXFP4 && !QuantizeMXFP8Alt && !QuantizeMXFP8 && !OutBF16;
+  localparam int unsigned RESULT_WIDTH  = OutBF16 ? 16 : (OutMXFP8 || OutMXFP8Alt) ? SRC_WIDTH : OutMXFP4 ? FP4_SRC_WIDTH : DST_WIDTH;
+
   // Matrix Size Parameters (in Bits)
   localparam int unsigned MAT_A_SIZE            = (`SRC_FMT == "FP4") ? MDIM*KDIM*FP4_SRC_WIDTH : MDIM*KDIM*SRC_WIDTH;
   localparam int unsigned MAT_B_SIZE            = (`SRC_FMT == "FP4") ? KDIM*NDIM*FP4_SRC_WIDTH : KDIM*NDIM*SRC_WIDTH;
@@ -85,7 +94,7 @@ module tb_mxcore_hwpe;
   localparam int unsigned MAT_SCALE_A_SIZE      = MDIM*NUM_SCALE_BLOCKS_K*SCALE_WIDTH;
   localparam int unsigned MAT_SCALE_B_SIZE      = NDIM*NUM_SCALE_BLOCKS_K*SCALE_WIDTH;
   localparam int unsigned MAT_PRELOAD_BIAS_SIZE = (Preload == 1) ? (MDIM*NDIM*DST_WIDTH) : 0;
-  localparam int unsigned MAT_RESULT_SIZE       = (QuantizeBF16 == 1) ? (MDIM*NDIM*16) : ((QuantizeMXFP8 == 1) ? (MDIM*NDIM*SRC_WIDTH) : (MDIM*NDIM*DST_WIDTH));
+  localparam int unsigned MAT_RESULT_SIZE       = MDIM*NDIM*RESULT_WIDTH;
   localparam int unsigned MAT_RESULT_SCALE_SIZE = MDIM*NDIM*SCALE_WIDTH/MX_BLOCK_SIZE;
 
   localparam int unsigned MAT_C_SIZE            = (Preload == 1) ? MAT_PRELOAD_BIAS_SIZE : MAT_RESULT_SIZE;
@@ -247,7 +256,7 @@ module tb_mxcore_hwpe;
 
 `ifdef MULTICTX
   typedef struct {
-    int unsigned  half, m, k, n, preload, quantize_mxfp8, quantize_bf16;
+    int unsigned  half, m, k, n, preload, quantize_mxfp4, quantize_mxfp8alt, quantize_mxfp8, quantize_bf16;
     int unsigned  a_ptr, b_ptr, sa_ptr, sb_ptr, c_ptr, sc_ptr, result_lines, footprint;
     string        memory_file, result_file;
   } mc_job_t;
@@ -270,13 +279,14 @@ module tb_mxcore_hwpe;
       ret = $fgets(line, fd);
       if ((ret == 0) || (line.len() < 2) || (line[0] == "#"))
         continue;
-      ret = $sscanf(line, "%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %s %s", idx,
-                    mc_jobs[job].half, mc_jobs[job].m, mc_jobs[job].k, mc_jobs[job].n,
-                    mc_jobs[job].preload, mc_jobs[job].quantize_mxfp8, mc_jobs[job].quantize_bf16,
+      ret = $sscanf(line, "%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %s %s", idx,
+                    mc_jobs[job].half, mc_jobs[job].m, mc_jobs[job].k, mc_jobs[job].n, mc_jobs[job].preload,
+                    mc_jobs[job].quantize_mxfp4, mc_jobs[job].quantize_mxfp8alt, mc_jobs[job].quantize_mxfp8, mc_jobs[job].quantize_bf16,
                     mc_jobs[job].a_ptr, mc_jobs[job].b_ptr, mc_jobs[job].sa_ptr, mc_jobs[job].sb_ptr,
                     mc_jobs[job].c_ptr, mc_jobs[job].sc_ptr, mc_jobs[job].result_lines, mc_jobs[job].footprint,
                     mc_jobs[job].memory_file, mc_jobs[job].result_file);
-      if ((mc_jobs[job].preload != Preload) || (mc_jobs[job].quantize_mxfp8 != (QuantizeMXFP8 && !QuantizeBF16)) || (mc_jobs[job].quantize_bf16 != QuantizeBF16))
+      if ((mc_jobs[job].preload != Preload) || (mc_jobs[job].quantize_mxfp4 != OutMXFP4) || (mc_jobs[job].quantize_mxfp8alt != OutMXFP8Alt) ||
+          (mc_jobs[job].quantize_mxfp8 != OutMXFP8) || (mc_jobs[job].quantize_bf16 != OutBF16))
         $fatal(1, "[TB] MXCORE: Job %0d output format/preload does not match the compiled TB configuration!", job);
       $display("[TB] Job %0d: half %0d, %0dx%0dx%0d, footprint %0d B", job, mc_jobs[job].half, mc_jobs[job].m, mc_jobs[job].k, mc_jobs[job].n, mc_jobs[job].footprint);
       job++;
@@ -331,7 +341,7 @@ module tb_mxcore_hwpe;
 
       // MXCORE Compute
       mxcore_compute(mc_jobs[job].m, mc_jobs[job].k, mc_jobs[job].n, fpnew_pkg::RNE, fpnew_pkg::SDOTP, 0, SRC_FMT, DST_FMT, '0, '0, '0, 0,
-                     mc_jobs[job].quantize_mxfp8, mc_jobs[job].quantize_bf16, mc_jobs[job].preload,
+                     mc_jobs[job].quantize_mxfp4, mc_jobs[job].quantize_mxfp8alt, mc_jobs[job].quantize_mxfp8, mc_jobs[job].quantize_bf16, mc_jobs[job].preload,
                      mc_jobs[job].a_ptr, mc_jobs[job].b_ptr, mc_jobs[job].sa_ptr, mc_jobs[job].sb_ptr, mc_jobs[job].c_ptr, mc_jobs[job].sc_ptr, clk);
     end
   end
@@ -393,7 +403,8 @@ module tb_mxcore_hwpe;
       $display("[TB] Job %0d: acquired context %0d @ %0t", job, status, $time);
 
       // MXCORE Compute
-      mxcore_compute(MDIM, KDIM, NDIM, fpnew_pkg::RNE, fpnew_pkg::SDOTP, 0, SRC_FMT, DST_FMT, '0, '0, '0, 0, QuantizeMXFP8, QuantizeBF16, Preload,
+      mxcore_compute(MDIM, KDIM, NDIM, fpnew_pkg::RNE, fpnew_pkg::SDOTP, 0, SRC_FMT, DST_FMT, '0, '0, '0, 0,
+                     QuantizeMXFP4, QuantizeMXFP8Alt, QuantizeMXFP8, QuantizeBF16, Preload,
                      BASE_PTR_VECTOR_A, BASE_PTR_VECTORS_B, BASE_PTR_SCALE_A, BASE_PTR_SCALE_B,
                      BASE_PTR_RESULT + job*(JOB_OUTPUT_SIZE/8), BASE_PTR_RESULT_SCALE + job*(JOB_OUTPUT_SIZE/8), clk);
     end
@@ -441,6 +452,8 @@ module tb_mxcore_hwpe;
     input logic                     mask,
     input AuxType                   aux,
     input logic                     flush,
+    input logic                     quantize_mxfp4,
+    input logic                     quantize_mxfp8alt,
     input logic                     quantize_mxfp8,
     input logic                     quantize_bf16,
     input logic                     preload,
@@ -455,7 +468,7 @@ module tb_mxcore_hwpe;
     logic [31:0] ctrl_engine_val;
 
     //  Get the Engine Control Value
-    ctrl_engine_val_compute(rnd_mode, op, op_mod, src_fmt, dst_fmt, tag, mask, aux, flush, quantize_mxfp8, quantize_bf16, preload, ctrl_engine_val);
+    ctrl_engine_val_compute(rnd_mode, op, op_mod, src_fmt, dst_fmt, tag, mask, aux, flush, quantize_mxfp4, quantize_mxfp8alt, quantize_mxfp8, quantize_bf16, preload, ctrl_engine_val);
     $display(" - MXCore Engine Control Register: 0x%0h", ctrl_engine_val);
 
     // Program MXCore
@@ -477,16 +490,20 @@ module tb_mxcore_hwpe;
     input  logic                    mask,
     input  AuxType                  aux,
     input  logic                    flush,
+    input  logic                    quantize_mxfp4,
+    input  logic                    quantize_mxfp8alt,
     input  logic                    quantize_mxfp8,
     input  logic                    quantize_bf16,
     input  logic                    preload,
     output logic [31:0]             ctrl_engine_val
   );
-    ctrl_engine_val[31:25]  = '0;
-    ctrl_engine_val[24]     = preload;
-    ctrl_engine_val[23]     = 1'b0;
-    ctrl_engine_val[22]     = quantize_mxfp8;
-    ctrl_engine_val[21]     = quantize_bf16;
+    ctrl_engine_val[31:27]  = '0;
+    ctrl_engine_val[26]     = preload;
+    ctrl_engine_val[25]     = 1'b0;
+    ctrl_engine_val[24]     = quantize_bf16;
+    ctrl_engine_val[23]     = quantize_mxfp8;
+    ctrl_engine_val[22]     = quantize_mxfp8alt;
+    ctrl_engine_val[21]     = quantize_mxfp4;
     ctrl_engine_val[20:17]  = {flush, aux, mask, tag};
     ctrl_engine_val[16:13]  = dst_fmt;
     ctrl_engine_val[12:9]   = src_fmt;
@@ -525,6 +542,19 @@ module tb_mxcore_hwpe;
     return result;
   endfunction
 
+  function automatic bit is_signed_zero_fp4_word(input logic [31:0] exp_word, input logic [31:0] got_word);
+    bit result;
+    result = 1'b1;
+    for (int n = 0; n < 8; n++) begin
+      if (exp_word[n*4+:4] !== got_word[n*4+:4]) begin
+        if (!((exp_word[n*4+:3] == 3'h0) && (got_word[n*4+:3] == 3'h0))) begin
+          result = 1'b0;
+        end
+      end
+    end
+    return result;
+  endfunction
+
   task automatic compare_output(string STIM_DATA, integer address, integer scale_address, integer result_lines);
     integer stim_fd;
     integer ret_code;
@@ -549,7 +579,9 @@ module tb_mxcore_hwpe;
       ret_code = $fscanf(stim_fd, "%x\n", exp_res);
       line_num++;
       if (exp_res !== tb_mxcore_hwpe.i_data_memory.memory[counter]) begin
-        if ((QuantizeBF16 == 1) ? is_signed_zero_bf16_word(exp_res, tb_mxcore_hwpe.i_data_memory.memory[counter]) : is_signed_zero_word(exp_res, tb_mxcore_hwpe.i_data_memory.memory[counter])) begin
+        if (OutBF16  ? is_signed_zero_bf16_word(exp_res, tb_mxcore_hwpe.i_data_memory.memory[counter]) :
+            OutMXFP4 ? is_signed_zero_fp4_word(exp_res, tb_mxcore_hwpe.i_data_memory.memory[counter])  :
+                       is_signed_zero_word(exp_res, tb_mxcore_hwpe.i_data_memory.memory[counter])) begin
           signed_zero_cnt += 1;
           $display("Warning: Signed/Unsigned Zero Mismatch occurs at Address %x, Index %0d, Line %0d: Expected %x, Got %x", counter*4, counter*4-address, line_num, exp_res, tb_mxcore_hwpe.i_data_memory.memory[counter]);
         end else begin
@@ -595,7 +627,7 @@ module tb_mxcore_hwpe;
     a_tile_size_val             = (`SRC_FMT == "FP4") ? (REUSE*VECTOR_SIZE*FP4_SRC_WIDTH) : (REUSE*VECTOR_SIZE*SRC_WIDTH);
     b_tile_size_val             = (`SRC_FMT == "FP4") ? (VECTOR_SIZE*NPE*FP4_SRC_WIDTH) : (VECTOR_SIZE*NPE*SRC_WIDTH);
     preload_tile_size_val       = NPE*REUSE*DST_WIDTH;
-    result_tile_size_val        = (QuantizeBF16 == 1) ? (NPE*REUSE*16) : ((QuantizeMXFP8 == 1) ? (NPE*REUSE*SRC_WIDTH) : (NPE*REUSE*DST_WIDTH));
+    result_tile_size_val        = NPE*REUSE*RESULT_WIDTH;
     result_scale_tile_size_val  = (NPE/MX_BLOCK_SIZE)*REUSE*SCALE_WIDTH;
     iter_count_val              = (`SRC_FMT == "FP4") ? ((KDIM*REUSE)/(2*VECTOR_SIZE)) : ((KDIM*REUSE)/VECTOR_SIZE);
     sa_vec_per_block_val        = ((iter_count_val/REUSE) < (MX_BLOCK_SIZE/VECTOR_SIZE)) ? (iter_count_val/REUSE) : (MX_BLOCK_SIZE/VECTOR_SIZE);

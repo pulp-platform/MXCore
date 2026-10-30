@@ -172,7 +172,7 @@ def fp32_to_fields(fp32_val):
         return sign, exp, mant
 
 def block_scale(block, data_type="FP8"):
-        emax = 15 if data_type == "FP8" else 8
+        emax = {"FP8": 15, "FP8ALT": 8, "FP4": 2}[data_type]
         max_exp = max([(fp32_to_fields(x)[1]) for x in block])
         is_special = any((fp32_to_fields(x)[1] == 0xFF) for x in block)
         scaled = max_exp - (127 + emax)
@@ -184,15 +184,16 @@ def block_scale(block, data_type="FP8"):
             return scale_bias - scale_emax, is_special
         return scale_bias + scaled, is_special
 
-def _quantize_mxfp8(fp32_val, scale, mant_bits, exp_bits, bias, exp_max, exp_min, sat_byte, nan_byte, full_field_reserved):
+def _quantize_mx(fp32_val, scale, mant_bits, exp_bits, bias, exp_max, exp_min, sat_byte, nan_byte, reserved):
     sign, exp, mant = fp32_to_fields(fp32_val)
+    sign_bit = exp_bits + mant_bits
 
     if exp == 0 and mant == 0:
-        return sign << 7
+        return sign << sign_bit
     if exp == 0xFF and mant != 0:
-        return (sign << 7) | nan_byte
+        return (sign << sign_bit) | nan_byte
     if exp == 0xFF and mant == 0:
-        return (sign << 7) | sat_byte
+        return (sign << sign_bit) | sat_byte
 
     is_subnorm_in = (exp == 0)
     unbiased_exp = (1 - 127) if is_subnorm_in else (exp - 127)
@@ -200,7 +201,7 @@ def _quantize_mxfp8(fp32_val, scale, mant_bits, exp_bits, bias, exp_max, exp_min
     scaled_exp = unbiased_exp - (scale - 127)
 
     if scaled_exp > exp_max:
-        return (sign << 7) | sat_byte
+        return (sign << sign_bit) | sat_byte
 
     w = mant_bits + 1
     shift_raw = exp_min - scaled_exp
@@ -217,25 +218,31 @@ def _quantize_mxfp8(fp32_val, scale, mant_bits, exp_bits, bias, exp_max, exp_min
         final_exp = scaled_exp + bias + carry
         mant_out = rounded & ((1 << mant_bits) - 1)
         max_exp_field = (1 << exp_bits) - 1
-        if full_field_reserved:
-            reserved = final_exp >= max_exp_field
+        if reserved == "field":
+            hit = final_exp >= max_exp_field
+        elif reserved == "mantissa":
+            hit = final_exp > max_exp_field or (final_exp == max_exp_field and mant_out == (1 << mant_bits) - 1)
         else:
-            reserved = final_exp > max_exp_field or (final_exp == max_exp_field and mant_out == (1 << mant_bits) - 1)
-        if reserved:
-            return (sign << 7) | sat_byte
-        return (sign << 7) | ((final_exp & max_exp_field) << mant_bits) | mant_out
+            hit = final_exp > max_exp_field
+        if hit:
+            return (sign << sign_bit) | sat_byte
+        return (sign << sign_bit) | ((final_exp & max_exp_field) << mant_bits) | mant_out
     else:
         if rounded & (1 << mant_bits):
-            return (sign << 7) | (1 << mant_bits)
-        return (sign << 7) | (rounded & ((1 << mant_bits) - 1))
+            return (sign << sign_bit) | (1 << mant_bits)
+        return (sign << sign_bit) | (rounded & ((1 << mant_bits) - 1))
 
 def quantize_e5m2(fp32_val, scale):
-    return _quantize_mxfp8(fp32_val, scale, mant_bits=2, exp_bits=5, bias=15, exp_max=15, exp_min=-14,
-                            sat_byte=0x7B, nan_byte=0x7D, full_field_reserved=True)
+    return _quantize_mx(fp32_val, scale, mant_bits=2, exp_bits=5, bias=15, exp_max=15, exp_min=-14,
+                        sat_byte=0x7B, nan_byte=0x7D, reserved="field")
 
 def quantize_e4m3(fp32_val, scale):
-    return _quantize_mxfp8(fp32_val, scale, mant_bits=3, exp_bits=4, bias=7, exp_max=8, exp_min=-6,
-                            sat_byte=0x7E, nan_byte=0x7F, full_field_reserved=False)
+    return _quantize_mx(fp32_val, scale, mant_bits=3, exp_bits=4, bias=7, exp_max=8, exp_min=-6,
+                        sat_byte=0x7E, nan_byte=0x7F, reserved="mantissa")
+
+def quantize_e2m1(fp32_val, scale):
+    return _quantize_mx(fp32_val, scale, mant_bits=1, exp_bits=2, bias=1, exp_max=2, exp_min=0,
+                        sat_byte=0x7, nan_byte=0x0, reserved="none")
 
 def format_matrix_A(matrix, name, vector_size=8, memory_data_width=32, data_type="FP8"):
         """Pretty-print Matrix A rows using same packing as memory_lines"""

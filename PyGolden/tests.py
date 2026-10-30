@@ -34,16 +34,18 @@ def gemm_mxcore_vector_gen(folder_path=default_path, data_type="FP8", acc_data_t
     memory_file    = os.path.join(folder_path, f"memory/data_memory_{_tag}.txt")
     result_file    = os.path.join(folder_path, f"result/result_{_tag}.txt")
     result_mx_file = os.path.join(folder_path, f"result_mx/result_{_tag}.txt")
+    result_mxfp8alt_file = os.path.join(folder_path, f"result_mxfp8alt/result_{_tag}.txt")
+    result_mxfp4_file = os.path.join(folder_path, f"result_mxfp4/result_{_tag}.txt")
     result_bf16_file = os.path.join(folder_path, f"result_bf16/result_{_tag}.txt")
     header_file    = os.path.join(folder_path, f"data_header/data_{_tag}.h")
     dataflow_file  = os.path.join(folder_path, f"debug/dataflow_debug_{_tag}.txt")
     mem_debug_file = os.path.join(folder_path, f"debug/memory_debug_{_tag}.txt")
 
-    for fpath in [memory_file, result_file, result_mx_file, result_bf16_file, header_file, dataflow_file]:
+    for fpath in [memory_file, result_file, result_mx_file, result_mxfp8alt_file, result_mxfp4_file, result_bf16_file, header_file, dataflow_file]:
         os.makedirs(os.path.dirname(fpath), exist_ok=True)
 
     if mxcore_gemm_functions.MEMORY_EXPORT:
-        for f in [memory_file, result_file, result_mx_file, result_bf16_file, header_file, dataflow_file, mem_debug_file]:
+        for f in [memory_file, result_file, result_mx_file, result_mxfp8alt_file, result_mxfp4_file, result_bf16_file, header_file, dataflow_file, mem_debug_file]:
             try:
                 os.remove(f)
             except FileNotFoundError:
@@ -67,6 +69,8 @@ def gemm_mxcore_vector_gen(folder_path=default_path, data_type="FP8", acc_data_t
         mem_file=memory_file,
         res_file=result_file,
         res_mx_file=result_mx_file,
+        res_mxfp8alt_file=result_mxfp8alt_file,
+        res_mxfp4_file=result_mxfp4_file,
         header_path=header_file,
         allow_fp9_special_values=False,
         set_max_fp9=set_max_fp9,
@@ -95,6 +99,8 @@ def gemm_mxcore_vector_gen(folder_path=default_path, data_type="FP8", acc_data_t
         print(f"Data Memory:            {memory_file}")
         print(f"MXCore FP32 Results:    {result_file}")
         print(f"MXCore MX Results:      {result_mx_file}")
+        print(f"MXCore MXFP8ALT Results:{result_mxfp8alt_file}")
+        print(f"MXCore MXFP4 Results:   {result_mxfp4_file}")
         print(f"MXCore BF16 Results:    {result_bf16_file}")
         print(f"C Data Header File:     {header_file}")
         print(f"Dataflow Debug:         {dataflow_file}")
@@ -105,6 +111,8 @@ def gemm_mxcore_vector_gen(folder_path=default_path, data_type="FP8", acc_data_t
         "memory":      memory_file,
         "result":      result_file,
         "result_mx":   result_mx_file,
+        "result_mxfp8alt": result_mxfp8alt_file,
+        "result_mxfp4": result_mxfp4_file,
         "result_bf16": result_bf16_file,
     }
 
@@ -126,14 +134,15 @@ def gemm_mxcore_multi_job_gen(jobs, name, folder_path=default_path, l1_kib=128, 
         src_bits    = 4 if data_type == "FP4" else 8
         scale_block = 2 * block_size if data_type == "FP4" else block_size
         k_blocks    = -(-kdim // scale_block)
-        dst_bytes   = {"FP32": 4, "BF16": 2, "MXFP8": 1}[output]
+        dst_bits    = {"FP32": 32, "BF16": 16, "MXFP8": 8, "MXFP8ALT": 8, "MXFP4": 4}[output]
+        is_mx_out   = output in ("MXFP8", "MXFP8ALT", "MXFP4")
 
         a_bytes  = mdim * kdim * src_bits // 8
         b_bytes  = kdim * ndim * src_bits // 8
         sa_bytes = mdim * k_blocks
         sb_bytes = ndim * k_blocks
-        c_bytes  = mdim * ndim * (4 if preload else dst_bytes)
-        sc_bytes = (mdim * ndim // block_size) if output == "MXFP8" else 0
+        c_bytes  = mdim * ndim * (32 if preload else dst_bits) // 8
+        sc_bytes = (mdim * ndim // block_size) if is_mx_out else 0
 
         footprint = a_bytes + b_bytes + sa_bytes + sb_bytes + c_bytes + sc_bytes
         if footprint > half_bytes:
@@ -173,23 +182,25 @@ def gemm_mxcore_multi_job_gen(jobs, name, folder_path=default_path, l1_kib=128, 
         c_ptr  = sb_ptr + sb_bytes
         sc_ptr = c_ptr + c_bytes
 
-        result_file  = {"FP32": files["result"], "BF16": files["result_bf16"], "MXFP8": files["result_mx"]}[output]
-        result_lines = mdim * ndim * dst_bytes // line_bytes
+        result_file  = {"FP32": files["result"], "BF16": files["result_bf16"], "MXFP8": files["result_mx"],
+                        "MXFP8ALT": files["result_mxfp8alt"], "MXFP4": files["result_mxfp4"]}[output]
+        result_lines = mdim * ndim * dst_bits // 8 // line_bytes
 
-        rows.append((j, half, mdim, kdim, ndim, int(preload), int(output == "MXFP8"), int(output == "BF16"),
+        rows.append((j, half, mdim, kdim, ndim, int(preload),
+                     int(output == "MXFP4"), int(output == "MXFP8ALT"), int(output == "MXFP8"), int(output == "BF16"),
                      a_ptr, b_ptr, sa_ptr, sb_ptr, c_ptr, sc_ptr, result_lines, footprint,
                      os.path.abspath(files["memory"]), os.path.abspath(result_file)))
 
     manifest = os.path.join(out_dir, f"jobs_{name}.txt")
     with open(manifest, "w") as f:
         f.write(f"# L1 = {l1_kib} KiB, half = {half_bytes} B; layout per half: A | B | SA | SB | C | SC\n")
-        f.write("# job half M K N preload quantize_mxfp8 quantize_bf16 a_ptr b_ptr sa_ptr sb_ptr c_ptr sc_ptr result_lines footprint memory_file result_file\n")
+        f.write("# job half M K N preload quantize_mxfp4 quantize_mxfp8alt quantize_mxfp8 quantize_bf16 a_ptr b_ptr sa_ptr sb_ptr c_ptr sc_ptr result_lines footprint memory_file result_file\n")
         for r in rows:
             f.write(" ".join(str(x) for x in r) + "\n")
 
     print(f"Multi-Context Manifest: {manifest}")
     for r in rows:
-        print(f"  Job {r[0]}: half {r[1]}, {r[2]}x{r[3]}x{r[4]}, footprint {r[15]} B ({100.0 * r[15] / half_bytes:.2f} % of L1/2)")
+        print(f"  Job {r[0]}: half {r[1]}, {r[2]}x{r[3]}x{r[4]}, footprint {r[17]} B ({100.0 * r[17] / half_bytes:.2f} % of L1/2)")
     return manifest
 
 
@@ -348,7 +359,7 @@ if __name__ == "__main__":
     multictx_group.add_argument(
         "--output",
         type=str,
-        choices=["FP32", "BF16", "MXFP8"],
+        choices=["FP32", "BF16", "MXFP8", "MXFP8ALT", "MXFP4"],
         default="FP32",
         help="Output format of the multi-context jobs (default: FP32)"
     )

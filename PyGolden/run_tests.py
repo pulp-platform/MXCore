@@ -152,8 +152,19 @@ def _shape_tag(t, defaults):
             f"_M{t['M']}_K{t['K']}_N{t['N']}_BS{defaults['block_size']}")
 
 
+RESULT_DIRS = {"FP32": "result", "BF16": "result_bf16", "MXFP8": "result_mx", "MXFP8ALT": "result_mxfp8alt", "MXFP4": "result_mxfp4"}
+
+
 def _output_fmt(t):
-    return "BF16" if t.get("quantize_bf16", 0) else ("MXFP8" if t["quantize"] else "FP32")
+    if t.get("quantize_bf16", 0):
+        return "BF16"
+    if t["quantize"]:
+        return "MXFP8"
+    if t.get("quantize_mxfp8alt", 0):
+        return "MXFP8ALT"
+    if t.get("quantize_mxfp4", 0):
+        return "MXFP4"
+    return "FP32"
 
 
 def _jobs_name(t, defaults):
@@ -189,10 +200,7 @@ def generate_testvectors(tests, defaults):
         tag = f"{data_type}_VS{vs}_MX{npe}_O{reuse}_M{M}_K{K}_N{N}_BS{defaults['block_size']}"
         tv_dir = _tv_dir(preload)
         mem_file = tv_dir / "memory" / f"data_memory_{tag}.txt"
-        res_file = tv_dir / "result" / f"result_{tag}.txt"
-        res_mx_file = tv_dir / "result_mx" / f"result_{tag}.txt"
-        res_bf16_file = tv_dir / "result_bf16" / f"result_{tag}.txt"
-        if mem_file.exists() and res_file.exists() and res_mx_file.exists() and res_bf16_file.exists():
+        if mem_file.exists() and all((tv_dir / d / f"result_{tag}.txt").exists() for d in RESULT_DIRS.values()):
             continue
         print(f"{C_DIM}Generating {'preload ' if preload else ''}test vectors for {data_type} (VS,NPE,Reuse)=({vs},{npe},{reuse}) (M,K,N)=({M},{K},{N})...{C_RESET}", file=sys.stderr)
         gemm_mxcore_vector_gen(
@@ -213,6 +221,8 @@ def generate_testvectors(tests, defaults):
 def generate_compile_tcl(cfg, defaults, workdir):
     M, K, N, quantize = cfg["M"], cfg["K"], cfg["N"], cfg["quantize"]
     quantize_bf16 = cfg.get("quantize_bf16", 0)
+    quantize_mxfp8alt = cfg.get("quantize_mxfp8alt", 0)
+    quantize_mxfp4 = cfg.get("quantize_mxfp4", 0)
     vs, npe, reuse = cfg["vector_size"], cfg["npe"], cfg["reuse"]
     data_type = cfg["data_type"]
     preload = cfg.get("preload", 0)
@@ -220,12 +230,7 @@ def generate_compile_tcl(cfg, defaults, workdir):
     tv_dir = _tv_dir(preload)
 
     mem_file = str(tv_dir / "memory"  / f"data_memory_{tag}.txt")
-    if quantize_bf16:
-        res_file = str(tv_dir / "result_bf16" / f"result_{tag}.txt")
-    elif quantize:
-        res_file = str(tv_dir / "result_mx" / f"result_{tag}.txt")
-    else:
-        res_file = str(tv_dir / "result" / f"result_{tag}.txt")
+    res_file = str(tv_dir / RESULT_DIRS[_output_fmt(cfg)] / f"result_{tag}.txt")
     if cfg.get("jobs_file", 0):
         mem_file = res_file = str(_jobs_file(cfg, defaults))
 
@@ -249,6 +254,8 @@ def generate_compile_tcl(cfg, defaults, workdir):
         "--define", f"M={M}",
         "--define", f"K={K}",
         "--define", f"N={N}",
+        "--define", f"QUANTIZE_MXFP4={quantize_mxfp4}",
+        "--define", f"QUANTIZE_MXFP8ALT={quantize_mxfp8alt}",
         "--define", f"QUANTIZE_MXFP8={quantize}",
         "--define", f"QUANTIZE_BF16={quantize_bf16}",
         "--define", f"PRELOAD={preload}",
@@ -291,7 +298,8 @@ def run_test(cfg, defaults):
     vs, npe, reuse = cfg["vector_size"], cfg["npe"], cfg["reuse"]
     data_type = cfg["data_type"]
     quantize_bf16 = cfg.get("quantize_bf16", 0)
-    q_str = "BF16" if quantize_bf16 else ("MX" if quantize else "FP32")
+    output_fmt = _output_fmt(cfg)
+    q_str = {"FP32": "FP32", "BF16": "BF16", "MXFP8": "MX", "MXFP8ALT": "MX8ALT", "MXFP4": "MX4"}[output_fmt]
     stall_str = "stall" if cfg["no_stalls"] == 0 else "nostall"
     name = f"{data_type}_VS{vs}_MX{npe}_O{reuse}_M{M}_K{K}_N{N}_{q_str}_{stall_str}"
     if cfg.get("preload", 0):
@@ -314,7 +322,7 @@ def run_test(cfg, defaults):
         "vector_size": vs, "npe": npe, "reuse": reuse, "data_type": data_type,
         "no_stalls": cfg["no_stalls"],
         "preload": cfg.get("preload", 0), "num_jobs": cfg.get("num_jobs", 1), "jobs_file": cfg.get("jobs_file", 0),
-        "quantize": quantize, "quantize_bf16": quantize_bf16, "tile_mode": tile_mode,
+        "quantize": quantize, "quantize_bf16": quantize_bf16, "output_fmt": output_fmt, "tile_mode": tile_mode,
         "status": "UNKNOWN", "reason": "",
     }
 
@@ -446,16 +454,17 @@ def print_results(results):
     sys.stderr.write("\r\033[K")
     sys.stderr.flush()
 
-    fp32_results = [r for r in results if not r["quantize"] and not r["quantize_bf16"]]
-    mx_results   = [r for r in results if r["quantize"] and not r["quantize_bf16"]]
-    bf16_results = [r for r in results if r["quantize_bf16"]]
-
-    if fp32_results:
-        _print_table("FP32 Output Results", fp32_results)
-    if mx_results:
-        _print_table("MXFP8 Quantized Output Results", mx_results)
-    if bf16_results:
-        _print_table("BF16 Quantized Output Results", bf16_results)
+    titles = {
+        "FP32": "FP32 Output Results",
+        "MXFP8": "MXFP8 (E5M2) Quantized Output Results",
+        "MXFP8ALT": "MXFP8 (E4M3) Quantized Output Results",
+        "MXFP4": "MXFP4 (E2M1) Quantized Output Results",
+        "BF16": "BF16 Quantized Output Results",
+    }
+    for output_fmt, title in titles.items():
+        subset = [r for r in results if r["output_fmt"] == output_fmt]
+        if subset:
+            _print_table(title, subset)
 
     # Summary
     total = len(results)

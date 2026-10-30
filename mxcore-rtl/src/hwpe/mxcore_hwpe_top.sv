@@ -29,7 +29,7 @@ module mxcore_hwpe_top
 
   // Control and Status Signals
   logic                 enable, clear;
-  logic                 quantize_any;
+  logic                 quantize_any, quantize_mxfp8_any, mx_result_ready;
   ctrl_streamer_t       streamer_ctrl;
   flags_streamer_t      streamer_flags;
   ctrl_engine_t         engine_ctrl;
@@ -104,6 +104,12 @@ module mxcore_hwpe_top
   );
 
   hwpe_stream_intf_stream #(
+    .DATA_WIDTH ( MXCoreMXFP4ResultDataWidth )
+  ) mxcore_mxfp4_result (
+    .clk  ( clk_i )
+  );
+
+  hwpe_stream_intf_stream #(
     .DATA_WIDTH ( MXCoreQuantScaleDataWidth )
   ) mxcore_mx_result_scale (
     .clk  ( clk_i )
@@ -136,6 +142,12 @@ module mxcore_hwpe_top
   hwpe_stream_intf_stream #(
     .DATA_WIDTH ( MXCoreTCDMDataWidth )
   ) mxcore_quantized_result (
+    .clk ( clk_i )
+  );
+
+  hwpe_stream_intf_stream #(
+    .DATA_WIDTH ( MXCoreTCDMDataWidth )
+  ) mxcore_mxfp4_quantized_result (
     .clk ( clk_i )
   );
 
@@ -211,7 +223,8 @@ module mxcore_hwpe_top
   );
 
   // ------------------------ MXCore Engine Result DEMUX ----------------------- //
-  assign quantize_any                     = engine_ctrl.quantize_mxfp8 || engine_ctrl.quantize_bf16;
+  assign quantize_mxfp8_any               = engine_ctrl.quantize_mxfp8 || engine_ctrl.quantize_mxfp8alt;
+  assign quantize_any                     = quantize_mxfp8_any || engine_ctrl.quantize_mxfp4 || engine_ctrl.quantize_bf16;
   assign engine_result_to_quantizer.valid = quantize_any ? mxcore_engine_result.valid : 1'b0;
   assign engine_result_to_quantizer.data  = mxcore_engine_result.data;
   assign engine_result_to_quantizer.strb  = mxcore_engine_result.strb;
@@ -226,15 +239,18 @@ module mxcore_hwpe_top
     .ScaleWidth        ( SCALE_WIDTH                 ),
     .InputDataWidth    ( MXCoreEngineResultDataWidth )
   ) i_result_quantizer (
-    .clk_i              ( clk_i                           ),
-    .rst_ni             ( rst_ni                          ),
-    .block_poison_i     ( engine_ctrl.block_poison_enable ),
-    .quantize_mxfp8_i   ( engine_ctrl.quantize_mxfp8      ),
-    .quantize_bf16_i    ( engine_ctrl.quantize_bf16       ),
-    .fp32_result_i      ( engine_result_to_quantizer.sink ),
-    .mxfp8_result_o     ( mxcore_mxfp8_result.source      ),
-    .mx_result_scale_o  ( mxcore_mx_result_scale.source   ),
-    .bf16_result_o      ( mxcore_bf16_quant_result.source )
+    .clk_i                ( clk_i                           ),
+    .rst_ni               ( rst_ni                          ),
+    .block_poison_i       ( engine_ctrl.block_poison_enable ),
+    .quantize_mxfp4_i     ( engine_ctrl.quantize_mxfp4      ),
+    .quantize_mxfp8alt_i  ( engine_ctrl.quantize_mxfp8alt   ),
+    .quantize_mxfp8_i     ( engine_ctrl.quantize_mxfp8      ),
+    .quantize_bf16_i      ( engine_ctrl.quantize_bf16       ),
+    .fp32_result_i        ( engine_result_to_quantizer.sink ),
+    .mxfp8_result_o       ( mxcore_mxfp8_result.source      ),
+    .mxfp4_result_o       ( mxcore_mxfp4_result.source      ),
+    .mx_result_scale_o    ( mxcore_mx_result_scale.source   ),
+    .bf16_result_o        ( mxcore_bf16_quant_result.source )
   );
 
   // ----------------------- MXCore Result FIFO Buffers ------------------------ //
@@ -250,7 +266,20 @@ module mxcore_hwpe_top
     .data_i   ( mxcore_mxfp8_result.sink        ),
     .data_o   ( mxcore_quantized_result.source  )
   );
+  // MXFP4 Quantized Result Buffer
+  mxcore_hwpe_result_fifo_buffer #(
+    .InputDataWidth     ( MXCoreMXFP4ResultDataWidth  ),
+    .OutputDataWidth    ( MXCoreTCDMDataWidth         ),
+    .FifoDepth          ( 2                           )
+  ) i_result_mxfp4_buffer (
+    .clk_i    ( clk_i                                 ),
+    .rst_ni   ( rst_ni                                ),
+    .clear_i  ( clear                                 ),
+    .data_i   ( mxcore_mxfp4_result.sink              ),
+    .data_o   ( mxcore_mxfp4_quantized_result.source  )
+  );
   // MX Result Block Scale Buffer
+  assign mx_result_ready = engine_ctrl.quantize_mxfp4 ? mxcore_mxfp4_result.ready : mxcore_mxfp8_result.ready;
   mxcore_hwpe_result_scale_fifo_buffer #(
     .InputDataWidth     ( MXCoreQuantScaleDataWidth ),
     .OutputDataWidth    ( MXCoreTCDMDataWidth       ),
@@ -259,7 +288,7 @@ module mxcore_hwpe_top
     .clk_i                  ( clk_i                               ),
     .rst_ni                 ( rst_ni                              ),
     .clear_i                ( clear                               ),
-    .engine_result_ready_i  ( mxcore_mxfp8_result.ready           ),
+    .engine_result_ready_i  ( mx_result_ready                     ),
     .tot_pushes_i           ( engine_ctrl.result_scale_tot_pushes ),
     .data_i                 ( mxcore_mx_result_scale.sink         ),
     .data_o                 ( mxcore_result_scale.source          )
@@ -290,15 +319,19 @@ module mxcore_hwpe_top
   );
 
   // ------------------------- MXCore Engine Result MUX ------------------------ //
-  assign mxcore_result.valid            = engine_ctrl.quantize_bf16  ? mxcore_bf16_result.valid      :
-                                          engine_ctrl.quantize_mxfp8 ? mxcore_quantized_result.valid : mxcore_fp32_result.valid;
-  assign mxcore_result.data             = engine_ctrl.quantize_bf16  ? mxcore_bf16_result.data       :
-                                          engine_ctrl.quantize_mxfp8 ? mxcore_quantized_result.data  : mxcore_fp32_result.data;
-  assign mxcore_result.strb             = engine_ctrl.quantize_bf16  ? mxcore_bf16_result.strb       :
-                                          engine_ctrl.quantize_mxfp8 ? mxcore_quantized_result.strb  : mxcore_fp32_result.strb;
-  assign mxcore_bf16_result.ready       = engine_ctrl.quantize_bf16  ? mxcore_result.ready : 1'b0;
-  assign mxcore_quantized_result.ready  = engine_ctrl.quantize_mxfp8 ? mxcore_result.ready : 1'b0;
-  assign mxcore_fp32_result.ready       = quantize_any ? 1'b0 : mxcore_result.ready;
+  assign mxcore_result.valid                  = engine_ctrl.quantize_bf16  ? mxcore_bf16_result.valid            :
+                                                quantize_mxfp8_any         ? mxcore_quantized_result.valid       :
+                                                engine_ctrl.quantize_mxfp4 ? mxcore_mxfp4_quantized_result.valid : mxcore_fp32_result.valid;
+  assign mxcore_result.data                   = engine_ctrl.quantize_bf16  ? mxcore_bf16_result.data             :
+                                                quantize_mxfp8_any         ? mxcore_quantized_result.data        :
+                                                engine_ctrl.quantize_mxfp4 ? mxcore_mxfp4_quantized_result.data  : mxcore_fp32_result.data;
+  assign mxcore_result.strb                   = engine_ctrl.quantize_bf16  ? mxcore_bf16_result.strb             :
+                                                quantize_mxfp8_any         ? mxcore_quantized_result.strb        :
+                                                engine_ctrl.quantize_mxfp4 ? mxcore_mxfp4_quantized_result.strb  : mxcore_fp32_result.strb;
+  assign mxcore_bf16_result.ready             = engine_ctrl.quantize_bf16  ? mxcore_result.ready : 1'b0;
+  assign mxcore_quantized_result.ready        = quantize_mxfp8_any         ? mxcore_result.ready : 1'b0;
+  assign mxcore_mxfp4_quantized_result.ready  = engine_ctrl.quantize_mxfp4 ? mxcore_result.ready : 1'b0;
+  assign mxcore_fp32_result.ready             = quantize_any               ? 1'b0 : mxcore_result.ready;
 
   // -------------------------- MXCore HWPE Streamer --------------------------- //
   assign enable = 1'b1;

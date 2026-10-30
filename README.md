@@ -11,7 +11,7 @@ MXCore is a fully parametric accelerator framework built around an in-house MX d
 
 - Fully parametric and configurable MX matrix multiplication accelerator.
 - Supports instantiating processing-element arrays with configurable inner-product (`VectorSize`) and outer-product (`NPE`) sizes and output-buffer reuse depth (`Reuse`), delivering a peak throughput of `VectorSize × NPE` MACs/cycle.
-- Includes an on-the-fly result quantizer that converts FP32 outputs into block-scaled MXFP8.
+- Includes an on-the-fly result quantizer that converts FP32 outputs into block-scaled MXFP8 (E5M2 or E4M3), MXFP4 or BF16, selected at runtime.
 
 ### Formats
 
@@ -19,7 +19,7 @@ MXCore is a fully parametric accelerator framework built around an in-house MX d
 | --------------------- | -------------------------------------- |
 | Source (operands)     | MXFP8 (E5M2), MXFP8ALT (E4M3), MXFP4   |
 | Accumulation / Destination | FP32                              |
-| Result quantization   | FP32 → MXFP8 (E5M2 or E4M3) in 32-element shared-exponent blocks, per the OCP MX specification |
+| Result quantization   | FP32 → MXFP8 (E5M2 or E4M3) or MXFP4 (E2M1) in 32-element shared-exponent blocks, per the OCP MX specification; FP32 → BF16 |
 
 ## Hardware Architecture
 MXCore is based on the HWPE template and consists of an engine, controller, and streamer. The MXCore Engine is the main compute subsystem of the accelerator, consisting of a parameterizable array of PEs, a shared global output buffer, and an MX quantizer.
@@ -29,7 +29,7 @@ MXCore is based on the HWPE template and consists of an engine, controller, and 
 | Category              | Supported                                     |
 | ---------------------- | ---------------------------------------------- |
 | Input formats (operands) | MXFP8 (E5M2), MXFP8ALT (E4M3), MXFP4        |
-| Output quantization    | MXFP8 only (E5M2 or E4M3)                     |
+| Output quantization    | MXFP8 (E5M2 or E4M3), MXFP4 (E2M1), BF16      |
 | Accumulation           | FP32                                          |
 | Tested 1K MAC configurations | (VS, NPE) ∈ {(32,32), (16,64), (8,128)}, Reuse ∈ {32,64,128} |
 
@@ -62,7 +62,8 @@ python -m PyGolden.tests --memory_export --data_type FP8 --scale -63 63 --gemm_m
 This creates, under `testvectors/nopreload/` (or `testvectors/preload/` with `--preload`):
 * `memory/`: Memory files with operand matrix data.
 * `result/`: FP32 result matrix data.
-* `result_mx/`: MX-quantized result matrix data.
+* `result_mx/`, `result_mxfp8alt/`, `result_mxfp4/`: MXFP8 (E5M2), MXFP8 (E4M3) and MXFP4 (E2M1) quantized result matrix data.
+* `result_bf16/`: BF16-quantized result matrix data.
 * `data_header/`: C data header files for software integration.
 * `debug/`: Dataflow and memory-layout debug dumps.
 

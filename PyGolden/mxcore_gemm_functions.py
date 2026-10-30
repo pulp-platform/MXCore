@@ -15,7 +15,7 @@ from .globals import get_constants
 
 MEMORY_EXPORT = True
 
-def mxcore_gemm(fp9_matrix_a, fp9_matrix_b, scale_matrix_a, scale_matrix_b, hardware_vector_size=8, vector_size=8, num_compute_units=8, num_out_buffers=4, data_type="FP8", acc_data_type="FP32", BLOCK_SIZE=32, result_mx_block_size=None, memory_data_width=32, mem_file=None, res_file=None, res_mx_file=None, header_path=None, allow_fp9_special_values=False, set_max_fp9=False, set_min_fp9=False, scale_range=[-127, 128], is_fp32_subnormal=False, force_fp32=False, exponent_range_fp32=[-127, 128], force_output_zero=False, use_external_data=False, dataflow_file=None, mem_debug_file=None, preload_matrix=None, block_poison_enable=False):
+def mxcore_gemm(fp9_matrix_a, fp9_matrix_b, scale_matrix_a, scale_matrix_b, hardware_vector_size=8, vector_size=8, num_compute_units=8, num_out_buffers=4, data_type="FP8", acc_data_type="FP32", BLOCK_SIZE=32, result_mx_block_size=None, memory_data_width=32, mem_file=None, res_file=None, res_mx_file=None, res_mxfp8alt_file=None, res_mxfp4_file=None, header_path=None, allow_fp9_special_values=False, set_max_fp9=False, set_min_fp9=False, scale_range=[-127, 128], is_fp32_subnormal=False, force_fp32=False, exponent_range_fp32=[-127, 128], force_output_zero=False, use_external_data=False, dataflow_file=None, mem_debug_file=None, preload_matrix=None, block_poison_enable=False):
     """
     Compute the vector-matrix multiplication of FP9 values
 
@@ -134,6 +134,8 @@ def mxcore_gemm(fp9_matrix_a, fp9_matrix_b, scale_matrix_a, scale_matrix_b, hard
             mem_file=mem_file,
             res_file=res_file,
             res_mx_file=res_mx_file,
+            res_mxfp8alt_file=res_mxfp8alt_file,
+            res_mxfp4_file=res_mxfp4_file,
             mem_debug_file=mem_debug_file,
             block_poison_enable=block_poison_enable,
         )
@@ -170,7 +172,7 @@ def mxcore_gemm(fp9_matrix_a, fp9_matrix_b, scale_matrix_a, scale_matrix_b, hard
         )
 
 
-def write_to_memory_file(fp9_matrix_a, fp9_matrix_b, scale_matrix_a, scale_matrix_b, result_matrix, preload_matrix=None, data_type="FP8", acc_data_type="FP32", vector_size=8, num_compute_units=8, num_out_buffers=4, memory_data_width=32, BLOCK_SIZE=32, result_mx_block_size=None, mem_file=None, res_file=None, res_mx_file=None, mem_debug_file=None, block_poison_enable=False):
+def write_to_memory_file(fp9_matrix_a, fp9_matrix_b, scale_matrix_a, scale_matrix_b, result_matrix, preload_matrix=None, data_type="FP8", acc_data_type="FP32", vector_size=8, num_compute_units=8, num_out_buffers=4, memory_data_width=32, BLOCK_SIZE=32, result_mx_block_size=None, mem_file=None, res_file=None, res_mx_file=None, res_mxfp8alt_file=None, res_mxfp4_file=None, mem_debug_file=None, block_poison_enable=False):
     mdim = len(fp9_matrix_a)
     kdim = len(fp9_matrix_a[0])
     ndim = len(fp9_matrix_b[0])
@@ -290,36 +292,40 @@ def write_to_memory_file(fp9_matrix_a, fp9_matrix_b, scale_matrix_a, scale_matri
                     word = _acc_to_fp32_u32(result_matrix[row_start + i][col_start + j])
                     result_lines.append(f"{word:08x}")
 
-    # ---------- Write MXFP8 Result Matrix -----------#
-    mx_row_segments = []
+    # ---------- Write MX (MXFP8 E5M2 / E4M3, MXFP4 E2M1) Result Matrices -----------#
     n_quantizer = max(1, num_compute_units // result_mx_block_size)
-    for row_start in row_tiles:
-        for col_start in col_tiles:
-            n_cols = cols_in_tile(col_start)
-            n_rows_t = rows_in_tile(row_start)
-            for i in range(n_rows_t):
-                row_idx = row_start + i
-                for q in range(n_quantizer):
-                    q_start = q * result_mx_block_size
-                    q_cols = min(result_mx_block_size, n_cols - q_start)
-                    segment = [_acc_to_fp32_u32(result_matrix[row_idx][col_start + q_start + j]) for j in range(q_cols)]
-                    block_fp32 = segment + [0] * (result_mx_block_size - q_cols)
-                    scale, poisoned = block_scale(block_fp32, data_type="FP8ALT" if data_type == "FP8ALT" else "FP8")
-                    quantize_fn = quantize_e5m2 if data_type != "FP8ALT" else quantize_e4m3
-                    nan_byte = 0x7D if data_type != "FP8ALT" else 0x7F
-                    if poisoned and block_poison_enable:
-                        quantized_all = [nan_byte] * len(block_fp32)
-                    else:
-                        quantized_all = [quantize_fn(v, scale) for v in block_fp32]
-                    mx_row_segments.append((quantized_all[:q_cols], scale))
 
-    all_mx_data = []
-    all_mx_scales = []
-    for row_bytes, scale in mx_row_segments:
-        all_mx_data.extend(row_bytes)
-        all_mx_scales.append(scale)
-    result_mx_lines.extend(pack_uint8_to_lines(all_mx_data))
-    result_mx_lines.extend(pack_uint8_to_lines(all_mx_scales))
+    def mx_result_lines(out_fmt):
+        quantize_fn = {"FP8": quantize_e5m2, "FP8ALT": quantize_e4m3, "FP4": quantize_e2m1}[out_fmt]
+        nan_code = {"FP8": 0x7D, "FP8ALT": 0x7F, "FP4": 0x0}[out_fmt]
+        all_data = []
+        all_scales = []
+        for row_start in row_tiles:
+            for col_start in col_tiles:
+                n_cols = cols_in_tile(col_start)
+                for i in range(rows_in_tile(row_start)):
+                    row_idx = row_start + i
+                    for q in range(n_quantizer):
+                        q_start = q * result_mx_block_size
+                        q_cols = min(result_mx_block_size, n_cols - q_start)
+                        segment = [_acc_to_fp32_u32(result_matrix[row_idx][col_start + q_start + j]) for j in range(q_cols)]
+                        block_fp32 = segment + [0] * (result_mx_block_size - q_cols)
+                        scale, poisoned = block_scale(block_fp32, data_type=out_fmt)
+                        if poisoned and block_poison_enable:
+                            quantized_all = [nan_code] * len(block_fp32)
+                            scale = 0xFF if out_fmt == "FP4" else scale
+                        else:
+                            quantized_all = [quantize_fn(v, scale) for v in block_fp32]
+                        all_data.extend(quantized_all[:q_cols])
+                        all_scales.append(scale)
+        if out_fmt == "FP4":
+            all_data = all_data + [0] * (len(all_data) % 2)
+            all_data = [all_data[k] | (all_data[k + 1] << 4) for k in range(0, len(all_data), 2)]
+        return pack_uint8_to_lines(all_data) + pack_uint8_to_lines(all_scales)
+
+    result_mx_lines.extend(mx_result_lines("FP8"))
+    result_mxfp8alt_lines = mx_result_lines("FP8ALT")
+    result_mxfp4_lines = mx_result_lines("FP4")
 
     # ---------- Line Count Assertions -----------#
     def _compute_expected_lines():
@@ -354,6 +360,7 @@ def write_to_memory_file(fp9_matrix_a, fp9_matrix_b, scale_matrix_a, scale_matri
         total_mx_bytes = sum(rows_in_tile(rs) * cols_in_tile(cs) for rs in row_tiles for cs in col_tiles)
         n_segments = sum(rows_in_tile(rs) * len(col_tiles) for rs in row_tiles) * n_quantizer
         exp['result_mx'] = ceil(total_mx_bytes / bytes_per_line) + ceil(n_segments / bytes_per_line)
+        exp['result_mxfp4'] = ceil(ceil(total_mx_bytes / 2) / bytes_per_line) + ceil(n_segments / bytes_per_line)
         return exp
 
     exp = _compute_expected_lines()
@@ -361,6 +368,8 @@ def write_to_memory_file(fp9_matrix_a, fp9_matrix_b, scale_matrix_a, scale_matri
         ("data_memory", len(memory_lines), exp['unpadded']),
         ("result FP32", len(result_lines), exp['result']),
         ("result_mx", len(result_mx_lines), exp['result_mx']),
+        ("result_mxfp8alt", len(result_mxfp8alt_lines), exp['result_mx']),
+        ("result_mxfp4", len(result_mxfp4_lines), exp['result_mxfp4']),
     ]
     for label, actual, expected in checks:
         assert actual == expected, (
@@ -378,10 +387,11 @@ def write_to_memory_file(fp9_matrix_a, fp9_matrix_b, scale_matrix_a, scale_matri
         with open(res_file, "w") as f:
             for line in result_lines:
                 f.write(line + "\n")
-    if res_mx_file:
-        with open(res_mx_file, "w") as f:
-            for line in result_mx_lines:
-                f.write(line + "\n")
+    for out_file, out_lines in ((res_mx_file, result_mx_lines), (res_mxfp8alt_file, result_mxfp8alt_lines), (res_mxfp4_file, result_mxfp4_lines)):
+        if out_file:
+            with open(out_file, "w") as f:
+                for line in out_lines:
+                    f.write(line + "\n")
 
     if mem_debug_file is not None:
         write_to_memory_debug(
@@ -497,14 +507,12 @@ def write_to_c_header(fp9_matrix_a, fp9_matrix_b, scale_matrix_a, scale_matrix_b
                     q_cols = min(result_mx_block_size, n_cols - q_start)
                     segment = [_acc_to_fp32_u32(result_matrix[row_idx][col_start + q_start + j]) for j in range(q_cols)]
                     block_fp32 = segment + [0] * (result_mx_block_size - q_cols)
-                    scale, poisoned = block_scale(block_fp32, data_type="FP8ALT" if data_type == "FP8ALT" else "FP8")
+                    scale, poisoned = block_scale(block_fp32, data_type="FP8")
                     result_scale_mx.append(scale)
-                    quantize_fn = quantize_e5m2 if data_type != "FP8ALT" else quantize_e4m3
-                    nan_byte = 0x7D if data_type != "FP8ALT" else 0x7F
                     if poisoned and block_poison_enable:
-                        quantized_all = [nan_byte] * len(block_fp32)
+                        quantized_all = [0x7D] * len(block_fp32)
                     else:
-                        quantized_all = [quantize_fn(v, scale) for v in block_fp32]
+                        quantized_all = [quantize_e5m2(v, scale) for v in block_fp32]
                     result_mx_all.extend(quantized_all[:q_cols])
 
     # Pack bytes into memory_data_width words

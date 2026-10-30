@@ -18,6 +18,7 @@ package mxcore_hwpe_package;
   // Input/Output Datawidths
   parameter int unsigned MXCoreEngineResultDataWidth  = NPE*DST_WIDTH;
   parameter int unsigned MXCoreQuantResultDataWidth   = NPE*SRC_WIDTH;
+  parameter int unsigned MXCoreMXFP4ResultDataWidth   = NPE*FP4SrcWidth;
   parameter int unsigned MXCoreBF16ResultDataWidth    = NPE*16;
   parameter int unsigned MXCoreQuantScaleDataWidth    = (NPE/BlockSize)*SCALE_WIDTH;
 
@@ -54,10 +55,12 @@ package mxcore_hwpe_package;
     logic                     mask;     // (1)                // REG_CTRL_ENGINE[18]
     logic                     aux;      // (1)                // REG_CTRL_ENGINE[19]
     logic                     flush;    // (1)                // REG_CTRL_ENGINE[20]
-    logic                     quantize_bf16; // (1)           // REG_CTRL_ENGINE[21]
-    logic                     quantize_mxfp8; // (1)          // REG_CTRL_ENGINE[22]
-    logic                     block_poison_enable; // (1)     // REG_CTRL_ENGINE[23]
-    logic                     preload; // (1)                 // REG_CTRL_ENGINE[24]
+    logic                     quantize_mxfp4; // (1)          // REG_CTRL_ENGINE[21]
+    logic                     quantize_mxfp8alt; // (1)       // REG_CTRL_ENGINE[22]
+    logic                     quantize_mxfp8; // (1)          // REG_CTRL_ENGINE[23]
+    logic                     quantize_bf16; // (1)           // REG_CTRL_ENGINE[24]
+    logic                     block_poison_enable; // (1)     // REG_CTRL_ENGINE[25]
+    logic                     preload; // (1)                 // REG_CTRL_ENGINE[26]
     logic [15:0]              iter_count;                     // REG_ITER_COUNT: per-output-tile iteration count
     logic                     sbmat_lt_bw;                    // If Scale B Matrix is smaller than TCDM BW (a single transaction)
     logic                     compute_en;                     // Compute enable (gated by the tile preload phase)
@@ -65,8 +68,10 @@ package mxcore_hwpe_package;
   } ctrl_engine_t;
 
   typedef struct packed {
-    logic                     quantize_bf16;
+    logic                     quantize_mxfp4;
+    logic                     quantize_mxfp8alt;
     logic                     quantize_mxfp8;
+    logic                     quantize_bf16;
     logic                     block_poison_enable;
     logic [31:0]              result_scale_tot_pushes;
     logic [31:0]              result_addr;
