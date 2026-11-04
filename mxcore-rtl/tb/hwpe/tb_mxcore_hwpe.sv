@@ -44,6 +44,7 @@ module tb_mxcore_hwpe;
 
   // Multi-Context L1 Ping-Pong Parameters
   parameter bit          MultiCtx         = `ifdef MULTICTX 1 `else 0 `endif;
+  parameter bit          McLoadAll        = `ifdef MC_LOAD_ALL 1 `else 0 `endif;
   parameter int unsigned L1Size           = `ifdef L1_KIB `L1_KIB*1024 `else 128*1024 `endif;
   parameter int unsigned DmaBytesPerCycle = `ifdef DMA_BW `DMA_BW `else 64 `endif;
 
@@ -257,10 +258,36 @@ module tb_mxcore_hwpe;
 
   logic mem_loaded = 1'b0;
 
+  int unsigned tb_cycle, tb_port_beats, tb_busy_cycles, tb_port_idle_busy;
+  int unsigned tb_first_trigger = 0;
+  int unsigned tb_last_done     = 0;
+
+  always @(posedge clk) begin
+    if (!rst_n) begin
+      tb_cycle          <= 0;
+      tb_port_beats     <= 0;
+      tb_busy_cycles    <= 0;
+      tb_port_idle_busy <= 0;
+    end else begin
+      tb_cycle          <= tb_cycle + 1;
+      tb_port_beats     <= tb_port_beats + ((|(tcdm_req & tcdm_gnt)) ? 1 : 0);
+      tb_busy_cycles    <= tb_busy_cycles + (busy ? 1 : 0);
+      tb_port_idle_busy <= tb_port_idle_busy + ((busy && !(|(tcdm_req & tcdm_gnt))) ? 1 : 0);
+    end
+  end
+
+  function automatic string tb_stats();
+    return $sformatf("cycle %0d, port beats %0d, busy %0d, port idle while busy %0d", tb_cycle, tb_port_beats, tb_busy_cycles, tb_port_idle_busy);
+  endfunction
+
+  task automatic tb_summary();
+    $display("[TB] Summary: %0d cycles from first trigger to last done, %s", tb_last_done - tb_first_trigger, tb_stats());
+  endtask
+
 `ifdef MULTICTX
   typedef struct {
-    int unsigned  half, m, k, n, preload, quantize_mxfp4, quantize_mxfp8alt, quantize_mxfp8, quantize_bf16;
-    int unsigned  a_ptr, b_ptr, sa_ptr, sb_ptr, c_ptr, sc_ptr, result_lines, footprint;
+    int unsigned  half, kind, in_bf16, m, k, n, preload, quantize_mxfp4, quantize_mxfp8alt, quantize_mxfp8, quantize_bf16;
+    int unsigned  a_ptr, b_ptr, sa_ptr, sb_ptr, c_ptr, sc_ptr, c_words, result_lines, footprint;
     string        memory_file, result_file;
   } mc_job_t;
 
@@ -282,16 +309,15 @@ module tb_mxcore_hwpe;
       ret = $fgets(line, fd);
       if ((ret == 0) || (line.len() < 2) || (line[0] == "#"))
         continue;
-      ret = $sscanf(line, "%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %s %s", idx,
-                    mc_jobs[job].half, mc_jobs[job].m, mc_jobs[job].k, mc_jobs[job].n, mc_jobs[job].preload,
+      ret = $sscanf(line, "%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %s %s", idx,
+                    mc_jobs[job].half, mc_jobs[job].kind, mc_jobs[job].in_bf16, mc_jobs[job].m, mc_jobs[job].k, mc_jobs[job].n, mc_jobs[job].preload,
                     mc_jobs[job].quantize_mxfp4, mc_jobs[job].quantize_mxfp8alt, mc_jobs[job].quantize_mxfp8, mc_jobs[job].quantize_bf16,
                     mc_jobs[job].a_ptr, mc_jobs[job].b_ptr, mc_jobs[job].sa_ptr, mc_jobs[job].sb_ptr,
-                    mc_jobs[job].c_ptr, mc_jobs[job].sc_ptr, mc_jobs[job].result_lines, mc_jobs[job].footprint,
+                    mc_jobs[job].c_ptr, mc_jobs[job].sc_ptr, mc_jobs[job].c_words, mc_jobs[job].result_lines, mc_jobs[job].footprint,
                     mc_jobs[job].memory_file, mc_jobs[job].result_file);
-      if ((mc_jobs[job].preload != Preload) || (mc_jobs[job].quantize_mxfp4 != OutMXFP4) || (mc_jobs[job].quantize_mxfp8alt != OutMXFP8Alt) ||
-          (mc_jobs[job].quantize_mxfp8 != OutMXFP8) || (mc_jobs[job].quantize_bf16 != OutBF16))
-        $fatal(1, "[TB] MXCORE: Job %0d output format/preload does not match the compiled TB configuration!", job);
-      $display("[TB] Job %0d: half %0d, %0dx%0dx%0d, footprint %0d B", job, mc_jobs[job].half, mc_jobs[job].m, mc_jobs[job].k, mc_jobs[job].n, mc_jobs[job].footprint);
+      if (ret != 23)
+        $fatal(1, "[TB] MXCORE: Job %0d: manifest line has %0d fields, expected 23!", job, ret);
+      $display("[TB] Job %0d: %s, half %0d, %0dx%0dx%0d, footprint %0d B", job, mc_jobs[job].kind ? "quant" : "gemm", mc_jobs[job].half, mc_jobs[job].m, mc_jobs[job].k, mc_jobs[job].n, mc_jobs[job].footprint);
       job++;
     end
     $fclose(fd);
@@ -303,7 +329,7 @@ module tb_mxcore_hwpe;
     int unsigned first, last;
     $readmemh(mc_jobs[job].memory_file, mc_image);
     first = c_region ? (mc_jobs[job].c_ptr - mc_jobs[job].a_ptr) / 4 : 0;
-    last  = c_region ? (first + (mc_jobs[job].preload ? mc_jobs[job].m * mc_jobs[job].n : 0)) : first + (mc_jobs[job].c_ptr - mc_jobs[job].a_ptr) / 4;
+    last  = c_region ? (first + mc_jobs[job].c_words) : first + (mc_jobs[job].c_ptr - mc_jobs[job].a_ptr) / 4;
     for (int unsigned w = first; w < last; w++) begin
       tb_mxcore_hwpe.i_data_memory.memory[mc_jobs[job].a_ptr/4 + w] = mc_image[w];
       if (paced && (((w - first + 1) % (DmaBytesPerCycle/4)) == 0))
@@ -318,7 +344,7 @@ module tb_mxcore_hwpe;
     wait (rst_n);
 
     mc_load_manifest();
-    for (int job = 0; (job < NumJobs) && (job < 2); job++) begin
+    for (int job = 0; (job < NumJobs) && (McLoadAll || (job < 2)); job++) begin
       mc_dma(job, 1'b0, 1'b0);
       mc_dma(job, 1'b1, 1'b0);
     end
@@ -328,7 +354,7 @@ module tb_mxcore_hwpe;
     PERIPH_WRITE(32'h14, 32'h0, 32'h0, clk);
 
     for (int job = 0; job < NumJobs; job++) begin
-      if (job >= 2) begin
+      if (!McLoadAll && (job >= 2)) begin
         wait (mc_inputs_free[job-2]);
         mc_dma(job, 1'b0, 1'b1);
         wait (mc_c_free[job-2]);
@@ -344,7 +370,7 @@ module tb_mxcore_hwpe;
 
       // MXCORE Compute
       mxcore_compute(mc_jobs[job].m, mc_jobs[job].k, mc_jobs[job].n, fpnew_pkg::RNE, fpnew_pkg::SDOTP, 0, SRC_FMT, DST_FMT, '0, '0, '0, 0,
-                     mc_jobs[job].quantize_mxfp4, mc_jobs[job].quantize_mxfp8alt, mc_jobs[job].quantize_mxfp8, mc_jobs[job].quantize_bf16, mc_jobs[job].preload, 1'b0, 1'b0,
+                     mc_jobs[job].quantize_mxfp4, mc_jobs[job].quantize_mxfp8alt, mc_jobs[job].quantize_mxfp8, mc_jobs[job].quantize_bf16, mc_jobs[job].preload, mc_jobs[job].kind, mc_jobs[job].in_bf16,
                      mc_jobs[job].a_ptr, mc_jobs[job].b_ptr, mc_jobs[job].sa_ptr, mc_jobs[job].sb_ptr, mc_jobs[job].c_ptr, mc_jobs[job].sc_ptr, clk);
     end
   end
@@ -359,17 +385,20 @@ module tb_mxcore_hwpe;
     while (done_count < NumJobs) begin
       @(posedge clk);
       if (evt[0][0]) begin
-        $display("[TB] Job %0d: compute done event @ %0t", compute_count, $time);
+        $display("[TB] Job %0d: compute done event @ %0t | %s", compute_count, $time, tb_stats());
         mc_inputs_free[compute_count] = 1'b1;
         compute_count++;
       end
       if (evt[0][1]) begin
-        $display("[TB] Job %0d: done event @ %0t", done_count, $time);
-        compare_output(mc_jobs[done_count].result_file, mc_jobs[done_count].c_ptr, mc_jobs[done_count].sc_ptr, mc_jobs[done_count].result_lines);
+        $display("[TB] Job %0d: done event @ %0t | %s", done_count, $time, tb_stats());
+        tb_last_done = tb_cycle;
+        compare_output(mc_jobs[done_count].result_file, mc_jobs[done_count].c_ptr, mc_jobs[done_count].sc_ptr, mc_jobs[done_count].result_lines,
+                       mc_jobs[done_count].quantize_bf16 ? 1 : mc_jobs[done_count].quantize_mxfp4 ? 2 : 0);
         mc_c_free[done_count] = 1'b1;
         done_count++;
       end
     end
+    tb_summary();
 
     // Soft Clear
     PERIPH_WRITE(32'h14, 32'h0, 32'h0, clk);
@@ -422,12 +451,14 @@ module tb_mxcore_hwpe;
     while (evt_count < NumJobs) begin
       @(posedge clk);
       if (evt[0][0])
-        $display("[TB] Compute done event @ %0t", $time);
+        $display("[TB] Compute done event @ %0t | %s", $time, tb_stats());
       if (evt[0][1]) begin
-        $display("[TB] Job %0d: done event @ %0t", evt_count, $time);
+        $display("[TB] Job %0d: done event @ %0t | %s", evt_count, $time, tb_stats());
+        tb_last_done = tb_cycle;
         evt_count++;
       end
     end
+    tb_summary();
 
     // Soft Clear
     PERIPH_WRITE(32'h14, 32'h0, 32'h0, clk);
@@ -435,7 +466,7 @@ module tb_mxcore_hwpe;
     #(10ns);
 
     for (int job = 0; job < NumJobs; job++)
-      compare_output(result_file, BASE_PTR_RESULT + job*(JOB_OUTPUT_SIZE/8), BASE_PTR_RESULT_SCALE + job*(JOB_OUTPUT_SIZE/8), MAT_RESULT_SIZE/32);
+      compare_output(result_file, BASE_PTR_RESULT + job*(JOB_OUTPUT_SIZE/8), BASE_PTR_RESULT_SCALE + job*(JOB_OUTPUT_SIZE/8), MAT_RESULT_SIZE/32, OutBF16 ? 1 : OutMXFP4 ? 2 : 0);
 
     // Finish the Simulation
     $finish;
@@ -481,6 +512,9 @@ module tb_mxcore_hwpe;
 
     // Trigger MXCore
     PERIPH_WRITE( 32'h0, 32'h0, 32'h0, clk_i );
+    if (tb_first_trigger == 0)
+      tb_first_trigger = tb_cycle;
+    $display("[TB] Trigger @ %0t | %s", $time, tb_stats());
 
     #(10ns);
   endtask
@@ -564,7 +598,7 @@ module tb_mxcore_hwpe;
     return result;
   endfunction
 
-  task automatic compare_output(string STIM_DATA, integer address, integer scale_address, integer result_lines);
+  task automatic compare_output(string STIM_DATA, integer address, integer scale_address, integer result_lines, integer fmt);
     integer stim_fd;
     integer ret_code;
     integer counter;
@@ -588,9 +622,9 @@ module tb_mxcore_hwpe;
       ret_code = $fscanf(stim_fd, "%x\n", exp_res);
       line_num++;
       if (exp_res !== tb_mxcore_hwpe.i_data_memory.memory[counter]) begin
-        if (OutBF16  ? is_signed_zero_bf16_word(exp_res, tb_mxcore_hwpe.i_data_memory.memory[counter]) :
-            OutMXFP4 ? is_signed_zero_fp4_word(exp_res, tb_mxcore_hwpe.i_data_memory.memory[counter])  :
-                       is_signed_zero_word(exp_res, tb_mxcore_hwpe.i_data_memory.memory[counter])) begin
+        if ((fmt == 1) ? is_signed_zero_bf16_word(exp_res, tb_mxcore_hwpe.i_data_memory.memory[counter]) :
+            (fmt == 2) ? is_signed_zero_fp4_word(exp_res, tb_mxcore_hwpe.i_data_memory.memory[counter])  :
+                         is_signed_zero_word(exp_res, tb_mxcore_hwpe.i_data_memory.memory[counter])) begin
           signed_zero_cnt += 1;
           $display("Warning: Signed/Unsigned Zero Mismatch occurs at Address %x, Index %0d, Line %0d: Expected %x, Got %x", counter*4, counter*4-address, line_num, exp_res, tb_mxcore_hwpe.i_data_memory.memory[counter]);
         end else begin
@@ -629,14 +663,17 @@ module tb_mxcore_hwpe;
     logic [6:0]  inner_tiles_val, inner_blocks_val;
     logic [5:0]  sa_vec_per_block_val;
     logic [31:0] a_tile_size_val, b_tile_size_val, preload_tile_size_val, result_tile_size_val, result_scale_tile_size_val, iter_count_val;
+    logic [31:0] preload_width_val, result_width_val;
     a_row_tiles_val             = MDIM / REUSE;
     b_col_tiles_val             = NDIM / NPE;
     inner_tiles_val             = KDIM / VECTOR_SIZE;
     inner_blocks_val            = (`SRC_FMT == "FP4") ? ((KDIM + FP4_BLOCK_SIZE - 1) / FP4_BLOCK_SIZE) : ((KDIM + MX_BLOCK_SIZE - 1) / MX_BLOCK_SIZE);
     a_tile_size_val             = (`SRC_FMT == "FP4") ? (REUSE*VECTOR_SIZE*FP4_SRC_WIDTH) : (REUSE*VECTOR_SIZE*SRC_WIDTH);
     b_tile_size_val             = (`SRC_FMT == "FP4") ? (VECTOR_SIZE*NPE*FP4_SRC_WIDTH) : (VECTOR_SIZE*NPE*SRC_WIDTH);
-    preload_tile_size_val       = NPE*REUSE*PRELOAD_WIDTH;
-    result_tile_size_val        = NPE*REUSE*RESULT_WIDTH;
+    preload_width_val           = (ctrl_engine_val[27] && ctrl_engine_val[28]) ? 16 : DST_WIDTH;
+    result_width_val            = ctrl_engine_val[24] ? 16 : (ctrl_engine_val[23] || ctrl_engine_val[22]) ? SRC_WIDTH : ctrl_engine_val[21] ? FP4_SRC_WIDTH : DST_WIDTH;
+    preload_tile_size_val       = NPE*REUSE*preload_width_val;
+    result_tile_size_val        = NPE*REUSE*result_width_val;
     result_scale_tile_size_val  = (NPE/MX_BLOCK_SIZE)*REUSE*SCALE_WIDTH;
     iter_count_val              = (`SRC_FMT == "FP4") ? ((KDIM*REUSE)/(2*VECTOR_SIZE)) : ((KDIM*REUSE)/VECTOR_SIZE);
     sa_vec_per_block_val        = ((iter_count_val/REUSE) < (MX_BLOCK_SIZE/VECTOR_SIZE)) ? (iter_count_val/REUSE) : (MX_BLOCK_SIZE/VECTOR_SIZE);

@@ -118,65 +118,94 @@ def gemm_mxcore_vector_gen(folder_path=default_path, data_type="FP8", acc_data_t
     }
 
 
-def gemm_mxcore_multi_job_gen(jobs, name, folder_path=default_path, l1_kib=128, mxdotp_vector_size=32, num_mx_units=32, num_out_buffers=64, memory_data_width=32, block_size=32):
+def gemm_mxcore_multi_job_gen(jobs, name, folder_path=default_path, l1_kib=128, mxdotp_vector_size=32, num_mx_units=32, num_out_buffers=64, memory_data_width=32, block_size=32, placement="pingpong"):
     mxcore_gemm_functions.MEMORY_EXPORT = True
-    half_bytes = l1_kib * 1024 // 2
+    l1_bytes   = l1_kib * 1024
+    half_bytes = l1_bytes // 2
     line_bytes = memory_data_width // 8
     out_dir = os.path.join(folder_path, "multicontext")
     rows = []
+    offset = 0
 
     for j, job in enumerate(jobs):
+        kind      = job.get("kind", "gemm")
         data_type = job.get("data_type", "FP8")
-        mdim, kdim, ndim = job["mdim"], job["kdim"], job["ndim"]
-        output = job.get("output", "FP32")
-        preload = job.get("preload", False)
-        seed = job.get("seed", j)
+        mdim, ndim = job["mdim"], job["ndim"]
+        kdim      = mxdotp_vector_size if kind == "quant" else job["kdim"]
+        output    = job.get("output", "FP32")
+        preload   = bool(job.get("preload", False)) and kind == "gemm"
+        input_fmt = job.get("input_fmt", "FP32")
+        seed      = job.get("seed", j)
 
-        src_bits    = 4 if data_type == "FP4" else 8
-        scale_block = 2 * block_size if data_type == "FP4" else block_size
-        k_blocks    = -(-kdim // scale_block)
-        dst_bits    = {"FP32": 32, "BF16": 16, "MXFP8": 8, "MXFP8ALT": 8, "MXFP4": 4}[output]
-        is_mx_out   = output in ("MXFP8", "MXFP8ALT", "MXFP4")
+        dst_bits  = {"FP32": 32, "BF16": 16, "MXFP8": 8, "MXFP8ALT": 8, "MXFP4": 4}[output]
+        is_mx_out = output in ("MXFP8", "MXFP8ALT", "MXFP4")
+        sc_bytes  = (mdim * ndim // block_size) if is_mx_out else 0
 
-        a_bytes  = mdim * kdim * src_bits // 8
-        b_bytes  = kdim * ndim * src_bits // 8
-        sa_bytes = mdim * k_blocks
-        sb_bytes = ndim * k_blocks
-        c_bytes  = mdim * ndim * (32 if preload else dst_bits) // 8
-        sc_bytes = (mdim * ndim // block_size) if is_mx_out else 0
-
-        footprint = a_bytes + b_bytes + sa_bytes + sb_bytes + c_bytes + sc_bytes
-        if footprint > half_bytes:
-            raise ValueError(f"Job {j}: footprint {footprint} B exceeds L1/2 = {half_bytes} B "
-                             f"({data_type} {mdim}x{kdim}x{ndim} -> {output}, preload={int(preload)})")
-
-        files = gemm_mxcore_vector_gen(
-            folder_path=folder_path,
-            folder_name="multicontext",
-            job_tag=f"_P{int(preload)}_S{seed}",
-            data_type=data_type,
-            seed=seed,
-            mdim=mdim,
-            kdim=kdim,
-            ndim=ndim,
-            mxdotp_vector_size=mxdotp_vector_size,
-            num_mx_units=num_mx_units,
-            num_out_buffers=num_out_buffers,
-            memory_data_width=memory_data_width,
-            block_size=block_size,
-            preload=preload,
-        )
-        if files["errors"] != 0:
-            raise RuntimeError(f"Job {j}: golden model reported {files['errors']} errors")
+        if kind == "quant":
+            a_bytes = b_bytes = sa_bytes = sb_bytes = 0
+            c_bytes = mdim * ndim * (16 if input_fmt == "BF16" else 32) // 8
+            c_words = c_bytes // line_bytes
+            files = quantizer_standalone_gen(
+                folder_path=folder_path,
+                input_fmt=input_fmt,
+                mdim=mdim,
+                ndim=ndim,
+                num_mx_units=num_mx_units,
+                num_out_buffers=num_out_buffers,
+                block_size=block_size,
+                seed=seed,
+                memory_data_width=memory_data_width,
+                job_tag=f"_S{seed}",
+            )
+            expected_mem_bytes = c_bytes
+        else:
+            src_bits    = 4 if data_type == "FP4" else 8
+            scale_block = 2 * block_size if data_type == "FP4" else block_size
+            k_blocks    = -(-kdim // scale_block)
+            a_bytes  = mdim * kdim * src_bits // 8
+            b_bytes  = kdim * ndim * src_bits // 8
+            sa_bytes = mdim * k_blocks
+            sb_bytes = ndim * k_blocks
+            c_bytes  = mdim * ndim * (32 if preload else dst_bits) // 8
+            c_words  = (c_bytes // line_bytes) if preload else 0
+            files = gemm_mxcore_vector_gen(
+                folder_path=folder_path,
+                folder_name="multicontext",
+                job_tag=f"_P{int(preload)}_S{seed}",
+                data_type=data_type,
+                seed=seed,
+                mdim=mdim,
+                kdim=kdim,
+                ndim=ndim,
+                mxdotp_vector_size=mxdotp_vector_size,
+                num_mx_units=num_mx_units,
+                num_out_buffers=num_out_buffers,
+                memory_data_width=memory_data_width,
+                block_size=block_size,
+                preload=preload,
+            )
+            if files["errors"] != 0:
+                raise RuntimeError(f"Job {j}: golden model reported {files['errors']} errors")
+            expected_mem_bytes = a_bytes + b_bytes + sa_bytes + sb_bytes + (c_bytes if preload else 0)
 
         with open(files["memory"]) as f:
             mem_bytes = sum(1 for line in f if line.strip()) * line_bytes
-        expected_mem_bytes = a_bytes + b_bytes + sa_bytes + sb_bytes + (c_bytes if preload else 0)
         if mem_bytes != expected_mem_bytes:
             raise ValueError(f"Job {j}: memory image is {mem_bytes} B, expected {expected_mem_bytes} B")
 
-        half   = j % 2
-        a_ptr  = half * half_bytes
+        footprint = a_bytes + b_bytes + sa_bytes + sb_bytes + c_bytes + sc_bytes
+        if placement == "pingpong":
+            if footprint > half_bytes:
+                raise ValueError(f"Job {j}: footprint {footprint} B exceeds L1/2 = {half_bytes} B "
+                                 f"({kind} {data_type} {mdim}x{kdim}x{ndim} -> {output}, preload={int(preload)})")
+            half  = j % 2
+            a_ptr = half * half_bytes
+        else:
+            if offset + footprint > l1_bytes:
+                raise ValueError(f"Job {j}: linear placement exceeds L1 = {l1_bytes} B at offset {offset} + {footprint} B")
+            half  = j
+            a_ptr = offset
+            offset += -(-footprint // 64) * 64
         b_ptr  = a_ptr + a_bytes
         sa_ptr = b_ptr + b_bytes
         sb_ptr = sa_ptr + sa_bytes
@@ -187,21 +216,22 @@ def gemm_mxcore_multi_job_gen(jobs, name, folder_path=default_path, l1_kib=128, 
                         "MXFP8ALT": files["result_mxfp8alt"], "MXFP4": files["result_mxfp4"]}[output]
         result_lines = mdim * ndim * dst_bits // 8 // line_bytes
 
-        rows.append((j, half, mdim, kdim, ndim, int(preload),
+        rows.append((j, half, int(kind == "quant"), int(kind == "quant" and input_fmt == "BF16"), mdim, kdim, ndim, int(preload),
                      int(output == "MXFP4"), int(output == "MXFP8ALT"), int(output == "MXFP8"), int(output == "BF16"),
-                     a_ptr, b_ptr, sa_ptr, sb_ptr, c_ptr, sc_ptr, result_lines, footprint,
+                     a_ptr, b_ptr, sa_ptr, sb_ptr, c_ptr, sc_ptr, c_words, result_lines, footprint,
                      os.path.abspath(files["memory"]), os.path.abspath(result_file)))
 
     manifest = os.path.join(out_dir, f"jobs_{name}.txt")
     with open(manifest, "w") as f:
-        f.write(f"# L1 = {l1_kib} KiB, half = {half_bytes} B; layout per half: A | B | SA | SB | C | SC\n")
-        f.write("# job half M K N preload quantize_mxfp4 quantize_mxfp8alt quantize_mxfp8 quantize_bf16 a_ptr b_ptr sa_ptr sb_ptr c_ptr sc_ptr result_lines footprint memory_file result_file\n")
+        f.write(f"# L1 = {l1_kib} KiB, placement = {placement} (half = {half_bytes} B); layout per job: A | B | SA | SB | C | SC\n")
+        f.write("# job half kind in_bf16 M K N preload quantize_mxfp4 quantize_mxfp8alt quantize_mxfp8 quantize_bf16 "
+                "a_ptr b_ptr sa_ptr sb_ptr c_ptr sc_ptr c_words result_lines footprint memory_file result_file\n")
         for r in rows:
             f.write(" ".join(str(x) for x in r) + "\n")
 
     print(f"Multi-Context Manifest: {manifest}")
     for r in rows:
-        print(f"  Job {r[0]}: half {r[1]}, {r[2]}x{r[3]}x{r[4]}, footprint {r[17]} B ({100.0 * r[17] / half_bytes:.2f} % of L1/2)")
+        print(f"  Job {r[0]}: {'quant' if r[2] else 'gemm'} @ {r[12]}, {r[4]}x{r[5]}x{r[6]}, footprint {r[20]} B ({100.0 * r[20] / half_bytes:.2f} % of L1/2)")
     return manifest
 
 
@@ -225,7 +255,7 @@ def _random_fp32_block(rng, block_size):
     return words
 
 
-def quantizer_standalone_gen(folder_path=default_path, input_fmt="FP32", mdim=128, ndim=128, num_mx_units=32, num_out_buffers=64, block_size=32, seed=None, memory_data_width=32):
+def quantizer_standalone_gen(folder_path=default_path, input_fmt="FP32", mdim=128, ndim=128, num_mx_units=32, num_out_buffers=64, block_size=32, seed=None, memory_data_width=32, job_tag=""):
     rng = random.Random(seed)
     words = []
     for _ in range(mdim * ndim // block_size):
@@ -234,7 +264,7 @@ def quantizer_standalone_gen(folder_path=default_path, input_fmt="FP32", mdim=12
         words = [(w & 0xFFFF0000) | (0x00400000 if ((w >> 23) & 0xFF) == 0xFF and (w & 0x7FFFFF) else 0) for w in words]
 
     folder = os.path.join(folder_path, "standalone", input_fmt)
-    tag = f"{input_fmt}_MX{num_mx_units}_O{num_out_buffers}_M{mdim}_N{ndim}_BS{block_size}"
+    tag = f"{input_fmt}_MX{num_mx_units}_O{num_out_buffers}_M{mdim}_N{ndim}_BS{block_size}{job_tag}"
     bytes_per_line = memory_data_width // 8
     segments = [words[k:k + block_size] for k in range(0, len(words), block_size)]
 

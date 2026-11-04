@@ -46,6 +46,7 @@ standalone_input ?= FP32
 num_jobs ?= 1
 # Multi-Context: L1 Ping-Pong with testvectors/multicontext/ Job Sequences
 multictx ?= 0
+mc_load_all ?= 0
 l1_kib ?= 128
 dma_bw ?= 64
 # Stalling in TB
@@ -103,6 +104,9 @@ ifeq ($(multictx), 1)
 	output_fmt := $(if $(filter 1,$(quantize_bf16)),BF16,$(if $(filter 1,$(quantize_mxfp8)),MXFP8,$(if $(filter 1,$(quantize_mxfp8alt)),MXFP8ALT,$(if $(filter 1,$(quantize_mxfp4)),MXFP4,FP32))))
 	jobs_file ?= ${ROOT_DIR}/testvectors/multicontext/jobs_${src_fmt}_VS${vector_size}_MX${num_compute_units}_O${num_out_buffers}_M${mdim}_K${kdim}_N${ndim}_BS${block_size}_${output_fmt}_P${preload}_J${num_jobs}.txt
 	vlog_defs += -DMULTICTX -DJOBS_FILE="\"$(jobs_file)\"" -DL1_KIB=$(l1_kib) -DDMA_BW=$(dma_bw)
+	ifeq ($(mc_load_all), 1)
+		vlog_defs += -DMC_LOAD_ALL
+	endif
 endif
 
 ifeq ($(target), tb_mxcore_hwpe)

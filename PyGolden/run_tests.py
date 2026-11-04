@@ -10,6 +10,7 @@ Usage:  python3 run_tests.py [--jobs N] [--tag TAG] [--timeout S]
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 import shutil
@@ -173,7 +174,13 @@ def _output_fmt(t):
     return "FP32"
 
 
+def _num_jobs(t):
+    return len(t["jobs"]) if t.get("jobs") else t.get("num_jobs", 1)
+
+
 def _jobs_name(t, defaults):
+    if t.get("jobs"):
+        return f"{t['data_type']}_VS{t['vector_size']}_MX{t['npe']}_O{t['reuse']}_BS{defaults['block_size']}_{t['seq_name']}"
     return f"{_shape_tag(t, defaults)}_{_output_fmt(t)}_P{t.get('preload', 0)}_J{t['num_jobs']}"
 
 
@@ -189,16 +196,23 @@ def generate_testvectors(tests, defaults):
             continue
         print(f"{C_DIM}Generating multi-context job sequence {_jobs_name(t, defaults)}...{C_RESET}", file=sys.stderr)
         mxcore_gemm_functions.MEMORY_EXPORT = True
-        jobs = [dict(data_type=t["data_type"], mdim=t["M"], kdim=t["K"], ndim=t["N"], output=_output_fmt(t),
-                     preload=bool(t.get("preload", 0)), seed=MAIN_SEED + j) for j in range(t["num_jobs"])]
+        if t.get("jobs"):
+            jobs = [dict(kind=j.get("kind", "gemm"), data_type=t["data_type"], mdim=j["M"], kdim=j.get("K", t["K"]), ndim=j["N"],
+                         output=j.get("output", "FP32"), preload=bool(j.get("preload", 0)), input_fmt=j.get("input_fmt", "FP32"),
+                         seed=MAIN_SEED + i) for i, j in enumerate(t["jobs"])]
+        else:
+            jobs = [dict(data_type=t["data_type"], mdim=t["M"], kdim=t["K"], ndim=t["N"], output=_output_fmt(t),
+                         preload=bool(t.get("preload", 0)), seed=MAIN_SEED + j) for j in range(t["num_jobs"])]
         gemm_mxcore_multi_job_gen(
             jobs,
             _jobs_name(t, defaults),
             folder_path=str(TV_ROOT),
+            l1_kib=t.get("l1_kib", 128),
             mxdotp_vector_size=t["vector_size"],
             num_mx_units=t["npe"],
             num_out_buffers=t["reuse"],
             block_size=defaults["block_size"],
+            placement=t.get("placement", "pingpong"),
         )
     for t in [t for t in tests if t.get("standalone", 0)]:
         tag = _shape_tag(t, defaults)
@@ -286,11 +300,15 @@ def generate_compile_tcl(cfg, defaults, workdir):
         "--define", f"STANDALONE_BF16={standalone_bf16}",
         "--define", f"PROB_STALL={defaults['prob_stall']}",
         "--define", f"NO_STALLS={cfg['no_stalls']}",
-        "--define", f"NUM_JOBS={cfg.get('num_jobs', 1)}",
+        "--define", f"NUM_JOBS={_num_jobs(cfg)}",
         "--define", "HCI_ASSERT_DELAY=#41ps",
     ]
     if cfg.get("jobs_file", 0):
-        bender_args += ["--define", "MULTICTX", "--define", "L1_KIB=128", "--define", "DMA_BW=64"]
+        bender_args += ["--define", "MULTICTX", "--define", f"L1_KIB={cfg.get('l1_kib', 128)}", "--define", "DMA_BW=64"]
+        if cfg.get("mc_load_all", 0):
+            bender_args += ["--define", "MC_LOAD_ALL"]
+    for define in cfg.get("extra_defines", []):
+        bender_args += ["--define", define]
 
     cmd = [str(REPO_ROOT / "install" / "bender" / "bender"), "script", "vsim"] + bender_args
     result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, cwd=str(REPO_ROOT))
@@ -332,10 +350,14 @@ def run_test(cfg, defaults):
         name = f"SQ_{data_type}_MX{npe}_O{reuse}_M{M}_N{N}_{q_str}_{stall_str}"
     if cfg.get("preload", 0):
         name += "_preload"
-    if cfg.get("num_jobs", 1) > 1:
-        name += f"_jobs{cfg['num_jobs']}"
+    if _num_jobs(cfg) > 1:
+        name += f"_jobs{_num_jobs(cfg)}"
     if cfg.get("jobs_file", 0):
         name += "_mc"
+    if cfg.get("jobs"):
+        name += f"_{cfg['seq_name']}"
+    if cfg.get("variant"):
+        name += f"_{cfg['variant']}"
 
     tile_mode = classify_tile(M, N, reuse, npe)
     timeout = cfg.get("timeout_seconds", defaults.get("timeout_seconds", 120))
@@ -349,9 +371,9 @@ def run_test(cfg, defaults):
         "name": name, "M": M, "K": K, "N": N,
         "vector_size": vs, "npe": npe, "reuse": reuse, "data_type": data_type,
         "no_stalls": cfg["no_stalls"],
-        "preload": cfg.get("preload", 0), "num_jobs": cfg.get("num_jobs", 1), "jobs_file": cfg.get("jobs_file", 0),
+        "preload": cfg.get("preload", 0), "num_jobs": _num_jobs(cfg), "jobs_file": cfg.get("jobs_file", 0), "seq_name": cfg.get("seq_name", ""), "variant": cfg.get("variant", ""),
         "quantize": quantize, "quantize_bf16": quantize_bf16, "output_fmt": output_fmt, "standalone": cfg.get("standalone", 0), "tile_mode": tile_mode,
-        "status": "UNKNOWN", "reason": "",
+        "status": "UNKNOWN", "reason": "", "cycles": 0,
     }
 
     _add_running(name)
@@ -410,7 +432,10 @@ def run_test(cfg, defaults):
         sim_log = sim_proc.stdout + "\n" + sim_proc.stderr
         (workdir / "sim.log").write_text(sim_log)
 
-        if "Failed with" not in sim_log and sim_log.count("Passed with no mismatches") >= cfg.get("num_jobs", 1):
+        summary = re.search(r"\[TB\] Summary: (\d+) cycles", sim_log)
+        result["cycles"] = int(summary.group(1)) if summary else 0
+
+        if "Failed with" not in sim_log and sim_log.count("Passed with no mismatches") >= _num_jobs(cfg):
             result["status"] = "PASS"
             result["reason"] = "No mismatches"
             _finish(name, True)
@@ -453,7 +478,7 @@ def _print_table(title, results_subset):
     print(f"{C_BOLD}  {title}{C_RESET}")
     print(f"{C_BOLD}{'═' * w}{C_RESET}")
 
-    hdr = f"  {'HW (VS,NPE,Reuse)':<19} {'Type':<5} {'(M,K,N)':<16} {'Pre':<4} {'Jobs':<5} {'Stall':<6} {'Tile Mode':<12} {'Status':<10} {'Reason'}"
+    hdr = f"  {'HW (VS,NPE,Reuse)':<19} {'Type':<5} {'(M,K,N)':<16} {'Pre':<4} {'Jobs':<5} {'Stall':<6} {'Tile Mode':<12} {'Cycles':>7}  {'Status':<10} {'Reason'}"
     print(f"{C_BOLD}{C_DIM}{hdr}{C_RESET}")
     print(f"  {'─' * (w - 2)}")
 
@@ -474,8 +499,10 @@ def _print_table(title, results_subset):
             st = f"{C_BG_RED}{C_WHITE}{C_BOLD}  FAIL  {C_RESET}"
 
         reason = r["reason"][:45]
+        if r.get("seq_name"):
+            reason = f"{r['seq_name']}{'/' + r['variant'] if r.get('variant') else ''}: {reason}"
         jobs = f"{r['num_jobs']}mc" if r["jobs_file"] else str(r["num_jobs"])
-        print(f"  {hw:<19} {r['data_type']:<5} {dims:<16} {pre:<4} {jobs:<5} {stall:<6} {tc}{r['tile_mode']:<12}{C_RESET} {st}  {C_DIM}{reason}{C_RESET}")
+        print(f"  {hw:<19} {r['data_type']:<5} {dims:<16} {pre:<4} {jobs:<5} {stall:<6} {tc}{r['tile_mode']:<12}{C_RESET} {r.get('cycles', 0):>7}  {st}  {C_DIM}{reason}{C_RESET}")
 
 
 def print_results(results):
@@ -575,6 +602,7 @@ def main():
             results.append(future.result())
 
     print_results(results)
+    (TEST_DIR / "results.json").write_text(json.dumps(sorted(results, key=lambda r: r["name"]), indent=1) + "\n")
 
     any_fail = any(r["status"] in ("FAIL", "TIMEOUT") for r in results)
     return 1 if any_fail else 0

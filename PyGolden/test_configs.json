@@ -5282,6 +5282,164 @@
       "tags": [
         "multictx"
       ]
+    },
+    {
+      "vector_size": 32, "npe": 32, "reuse": 64, "data_type": "FP8", "M": 128, "K": 128, "N": 128, "quantize": 0, "no_stalls": 1,
+      "jobs_file": 1, "placement": "linear", "mc_load_all": 1, "l1_kib": 512, "timeout_seconds": 900, "seq_name": "gemm_bf16",
+      "jobs": [{"kind": "gemm", "M": 128, "K": 128, "N": 128, "output": "BF16"}],
+      "tags": ["overlap_eval_p0"]
+    },
+    {
+      "vector_size": 32, "npe": 32, "reuse": 64, "data_type": "FP8", "M": 128, "K": 128, "N": 128, "quantize": 0, "no_stalls": 1,
+      "jobs_file": 1, "placement": "linear", "mc_load_all": 1, "l1_kib": 512, "timeout_seconds": 900, "seq_name": "quant_bf16",
+      "jobs": [{"kind": "quant", "M": 128, "N": 128, "input_fmt": "BF16", "output": "MXFP8"}],
+      "tags": ["overlap_eval_p0"]
+    },
+    {
+      "vector_size": 32, "npe": 32, "reuse": 64, "data_type": "FP8", "M": 128, "K": 128, "N": 128, "quantize": 0, "no_stalls": 1,
+      "jobs_file": 1, "placement": "linear", "mc_load_all": 1, "l1_kib": 512, "timeout_seconds": 900, "seq_name": "quant_fp32",
+      "jobs": [{"kind": "quant", "M": 128, "N": 128, "input_fmt": "FP32", "output": "MXFP8"}],
+      "tags": ["overlap_eval_p0"]
+    },
+    {
+      "vector_size": 32, "npe": 32, "reuse": 64, "data_type": "FP8", "M": 128, "K": 128, "N": 128, "quantize": 0, "no_stalls": 1,
+      "jobs_file": 1, "placement": "linear", "mc_load_all": 1, "l1_kib": 512, "timeout_seconds": 900, "seq_name": "gemm_bf16_quant",
+      "jobs": [{"kind": "gemm", "M": 128, "K": 128, "N": 128, "output": "BF16"},
+               {"kind": "quant", "M": 128, "N": 128, "input_fmt": "BF16", "output": "MXFP8"}],
+      "tags": ["overlap_eval_p0"]
+    },
+    {
+      "vector_size": 32, "npe": 32, "reuse": 64, "data_type": "FP8", "M": 128, "K": 128, "N": 128, "quantize": 0, "no_stalls": 1,
+      "jobs_file": 1, "placement": "linear", "mc_load_all": 1, "l1_kib": 512, "timeout_seconds": 900, "seq_name": "quant_gemm_bf16",
+      "jobs": [{"kind": "quant", "M": 128, "N": 128, "input_fmt": "BF16", "output": "MXFP8"},
+               {"kind": "gemm", "M": 128, "K": 128, "N": 128, "output": "BF16"}],
+      "tags": ["overlap_eval_p0"]
+    },
+    {
+      "vector_size": 32, "npe": 32, "reuse": 64, "data_type": "FP8", "M": 128, "K": 128, "N": 128, "quantize": 0, "no_stalls": 1,
+      "jobs_file": 1, "placement": "linear", "mc_load_all": 1, "l1_kib": 512, "timeout_seconds": 900, "seq_name": "gemm_mx_quant",
+      "jobs": [{"kind": "gemm", "M": 128, "K": 128, "N": 128, "output": "MXFP8"},
+               {"kind": "quant", "M": 128, "N": 128, "input_fmt": "BF16", "output": "MXFP8"}],
+      "tags": ["overlap_eval_p0"]
+    },
+    {
+      "vector_size": 32, "npe": 32, "reuse": 64, "data_type": "FP8", "M": 128, "K": 128, "N": 128, "quantize": 0, "no_stalls": 1,
+      "jobs_file": 1, "placement": "linear", "mc_load_all": 1, "l1_kib": 512, "timeout_seconds": 900, "seq_name": "gemm_bf16_split2",
+      "jobs": [{"kind": "gemm", "M": 64, "K": 128, "N": 128, "output": "BF16"},
+               {"kind": "gemm", "M": 64, "K": 128, "N": 128, "output": "BF16"}],
+      "tags": ["overlap_eval_p0"]
+    },
+    {
+      "vector_size": 32, "npe": 32, "reuse": 64, "data_type": "FP8", "M": 128, "K": 128, "N": 128, "quantize": 0, "no_stalls": 1,
+      "jobs_file": 1, "placement": "linear", "mc_load_all": 1, "l1_kib": 512, "timeout_seconds": 900, "seq_name": "quant_split2",
+      "jobs": [{"kind": "quant", "M": 64, "N": 128, "input_fmt": "BF16", "output": "MXFP8"},
+               {"kind": "quant", "M": 64, "N": 128, "input_fmt": "BF16", "output": "MXFP8"}],
+      "tags": ["overlap_eval_p0"]
+    },
+    {
+      "vector_size": 32, "npe": 32, "reuse": 64, "data_type": "FP8", "M": 128, "K": 128, "N": 128, "quantize": 0, "no_stalls": 1,
+      "jobs_file": 1, "placement": "linear", "mc_load_all": 1, "l1_kib": 512, "timeout_seconds": 900, "seq_name": "attention_bf16in",
+      "jobs": [{"kind": "quant", "M": 128, "N": 128, "input_fmt": "BF16", "output": "MXFP8"},
+               {"kind": "quant", "M": 128, "N": 128, "input_fmt": "BF16", "output": "MXFP8"},
+               {"kind": "gemm", "M": 128, "K": 128, "N": 128, "output": "BF16"},
+               {"kind": "quant", "M": 128, "N": 128, "input_fmt": "BF16", "output": "MXFP8"},
+               {"kind": "quant", "M": 128, "N": 128, "input_fmt": "BF16", "output": "MXFP8"},
+               {"kind": "gemm", "M": 128, "K": 128, "N": 128, "output": "BF16"}],
+      "tags": ["overlap_eval_p0"]
+    },
+    {
+      "vector_size": 32, "npe": 32, "reuse": 64, "data_type": "FP8", "M": 128, "K": 128, "N": 128, "quantize": 0, "no_stalls": 1,
+      "jobs_file": 1, "placement": "linear", "mc_load_all": 1, "l1_kib": 512, "timeout_seconds": 900, "seq_name": "attention_fp32in",
+      "jobs": [{"kind": "quant", "M": 128, "N": 128, "input_fmt": "FP32", "output": "MXFP8"},
+               {"kind": "quant", "M": 128, "N": 128, "input_fmt": "FP32", "output": "MXFP8"},
+               {"kind": "gemm", "M": 128, "K": 128, "N": 128, "output": "BF16"},
+               {"kind": "quant", "M": 128, "N": 128, "input_fmt": "FP32", "output": "MXFP8"},
+               {"kind": "quant", "M": 128, "N": 128, "input_fmt": "BF16", "output": "MXFP8"},
+               {"kind": "gemm", "M": 128, "K": 128, "N": 128, "output": "BF16"}],
+      "tags": ["overlap_eval_p0"]
+    },
+    {
+      "vector_size": 32, "npe": 32, "reuse": 64, "data_type": "FP4", "M": 128, "K": 128, "N": 128, "quantize": 0, "no_stalls": 1,
+      "jobs_file": 1, "placement": "linear", "mc_load_all": 1, "l1_kib": 512, "timeout_seconds": 900, "seq_name": "gemm_bf16",
+      "jobs": [{"kind": "gemm", "M": 128, "K": 128, "N": 128, "output": "BF16"}],
+      "tags": ["overlap_eval_p0"]
+    },
+    {
+      "vector_size": 32, "npe": 32, "reuse": 64, "data_type": "FP4", "M": 128, "K": 128, "N": 128, "quantize": 0, "no_stalls": 1,
+      "jobs_file": 1, "placement": "linear", "mc_load_all": 1, "l1_kib": 512, "timeout_seconds": 900, "seq_name": "gemm_bf16_quant",
+      "jobs": [{"kind": "gemm", "M": 128, "K": 128, "N": 128, "output": "BF16"},
+               {"kind": "quant", "M": 128, "N": 128, "input_fmt": "BF16", "output": "MXFP8"}],
+      "tags": ["overlap_eval_p0"]
+    },
+    {
+      "vector_size": 32, "npe": 32, "reuse": 64, "data_type": "FP4", "M": 128, "K": 128, "N": 128, "quantize": 0, "no_stalls": 1,
+      "jobs_file": 1, "placement": "linear", "mc_load_all": 1, "l1_kib": 512, "timeout_seconds": 900, "seq_name": "gemm_mx_quant",
+      "jobs": [{"kind": "gemm", "M": 128, "K": 128, "N": 128, "output": "MXFP8"},
+               {"kind": "quant", "M": 128, "N": 128, "input_fmt": "BF16", "output": "MXFP8"}],
+      "tags": ["overlap_eval_p0"]
+    },
+    {
+      "vector_size": 32, "npe": 32, "reuse": 64, "data_type": "FP8", "M": 128, "K": 128, "N": 128, "quantize": 0, "no_stalls": 0,
+      "jobs_file": 1, "placement": "linear", "mc_load_all": 1, "l1_kib": 512, "timeout_seconds": 900, "seq_name": "gemm_bf16_quant",
+      "jobs": [{"kind": "gemm", "M": 128, "K": 128, "N": 128, "output": "BF16"},
+               {"kind": "quant", "M": 128, "N": 128, "input_fmt": "BF16", "output": "MXFP8"}],
+      "tags": ["overlap_eval_p0"]
+    },
+    {
+      "vector_size": 32, "npe": 32, "reuse": 64, "data_type": "FP8", "M": 128, "K": 128, "N": 128, "quantize": 0, "no_stalls": 0,
+      "jobs_file": 1, "placement": "linear", "mc_load_all": 1, "l1_kib": 512, "timeout_seconds": 900, "seq_name": "attention_bf16in",
+      "jobs": [{"kind": "quant", "M": 128, "N": 128, "input_fmt": "BF16", "output": "MXFP8"},
+               {"kind": "quant", "M": 128, "N": 128, "input_fmt": "BF16", "output": "MXFP8"},
+               {"kind": "gemm", "M": 128, "K": 128, "N": 128, "output": "BF16"},
+               {"kind": "quant", "M": 128, "N": 128, "input_fmt": "BF16", "output": "MXFP8"},
+               {"kind": "quant", "M": 128, "N": 128, "input_fmt": "BF16", "output": "MXFP8"},
+               {"kind": "gemm", "M": 128, "K": 128, "N": 128, "output": "BF16"}],
+      "tags": ["overlap_eval_p0"]
+    },
+    {
+      "vector_size": 32, "npe": 32, "reuse": 64, "data_type": "FP8", "M": 128, "K": 128, "N": 128, "quantize": 0, "no_stalls": 1, "preload": 1,
+      "jobs_file": 1, "placement": "linear", "mc_load_all": 1, "l1_kib": 512, "timeout_seconds": 900, "seq_name": "gemm_bf16_p1",
+      "jobs": [{"kind": "gemm", "M": 128, "K": 128, "N": 128, "output": "BF16", "preload": 1}],
+      "tags": ["overlap_eval_p1"]
+    },
+    {
+      "vector_size": 32, "npe": 32, "reuse": 64, "data_type": "FP8", "M": 128, "K": 128, "N": 128, "quantize": 0, "no_stalls": 1, "preload": 1,
+      "jobs_file": 1, "placement": "linear", "mc_load_all": 1, "l1_kib": 512, "timeout_seconds": 900, "seq_name": "gemm_bf16_quant_p1",
+      "jobs": [{"kind": "gemm", "M": 128, "K": 128, "N": 128, "output": "BF16", "preload": 1},
+               {"kind": "quant", "M": 128, "N": 128, "input_fmt": "BF16", "output": "MXFP8"}],
+      "tags": ["overlap_eval_p1"]
+    },
+    {
+      "vector_size": 32, "npe": 32, "reuse": 64, "data_type": "FP8", "M": 128, "K": 128, "N": 128, "quantize": 0, "no_stalls": 1, "preload": 1,
+      "jobs_file": 1, "placement": "linear", "mc_load_all": 1, "l1_kib": 512, "timeout_seconds": 900, "seq_name": "quant_gemm_bf16_p1",
+      "jobs": [{"kind": "quant", "M": 128, "N": 128, "input_fmt": "BF16", "output": "MXFP8"},
+               {"kind": "gemm", "M": 128, "K": 128, "N": 128, "output": "BF16", "preload": 1}],
+      "tags": ["overlap_eval_p1"]
+    },
+    {
+      "vector_size": 32, "npe": 32, "reuse": 64, "data_type": "FP8", "M": 128, "K": 128, "N": 128, "quantize": 0, "no_stalls": 1, "preload": 1,
+      "jobs_file": 1, "placement": "linear", "mc_load_all": 1, "l1_kib": 512, "timeout_seconds": 900, "seq_name": "gemm_mx_quant_p1",
+      "jobs": [{"kind": "gemm", "M": 128, "K": 128, "N": 128, "output": "MXFP8", "preload": 1},
+               {"kind": "quant", "M": 128, "N": 128, "input_fmt": "BF16", "output": "MXFP8"}],
+      "tags": ["overlap_eval_p1"]
+    },
+    {
+      "vector_size": 32, "npe": 32, "reuse": 64, "data_type": "FP8", "M": 128, "K": 128, "N": 128, "quantize": 0, "no_stalls": 1, "preload": 1,
+      "jobs_file": 1, "placement": "linear", "mc_load_all": 1, "l1_kib": 512, "timeout_seconds": 900, "seq_name": "gemm_bf16_split2_p1",
+      "jobs": [{"kind": "gemm", "M": 64, "K": 128, "N": 128, "output": "BF16", "preload": 1},
+               {"kind": "gemm", "M": 64, "K": 128, "N": 128, "output": "BF16", "preload": 1}],
+      "tags": ["overlap_eval_p1"]
+    },
+    {
+      "vector_size": 32, "npe": 32, "reuse": 64, "data_type": "FP8", "M": 128, "K": 128, "N": 128, "quantize": 0, "no_stalls": 1, "preload": 1,
+      "jobs_file": 1, "placement": "linear", "mc_load_all": 1, "l1_kib": 512, "timeout_seconds": 900, "seq_name": "attention_bf16in_p1",
+      "jobs": [{"kind": "quant", "M": 128, "N": 128, "input_fmt": "BF16", "output": "MXFP8"},
+               {"kind": "quant", "M": 128, "N": 128, "input_fmt": "BF16", "output": "MXFP8"},
+               {"kind": "gemm", "M": 128, "K": 128, "N": 128, "output": "BF16", "preload": 1},
+               {"kind": "quant", "M": 128, "N": 128, "input_fmt": "BF16", "output": "MXFP8"},
+               {"kind": "quant", "M": 128, "N": 128, "input_fmt": "BF16", "output": "MXFP8"},
+               {"kind": "gemm", "M": 128, "K": 128, "N": 128, "output": "BF16", "preload": 1}],
+      "tags": ["overlap_eval_p1"]
     }
   ]
 }
