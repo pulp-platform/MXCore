@@ -39,6 +39,9 @@ quantize_mxfp8 ?= 1
 quantize_bf16 ?= 0
 # Accumulator Preload
 preload ?= 1
+# Standalone Quantizer (FP32 or BF16 Input in the C Region, Quantized In Place)
+standalone ?= 0
+standalone_input ?= FP32
 # Multi-Context: Number of Jobs Queued Back-to-Back
 num_jobs ?= 1
 # Multi-Context: L1 Ping-Pong with testvectors/multicontext/ Job Sequences
@@ -53,7 +56,9 @@ mdim ?= 128
 kdim ?= 128
 ndim ?= 128
 
-ifeq ($(preload), 1)
+ifeq ($(standalone), 1)
+	TV_DIR           ?= ${ROOT_DIR}/testvectors/standalone/${standalone_input}
+else ifeq ($(preload), 1)
 	TV_DIR           ?= ${ROOT_DIR}/testvectors/preload
 else
 	TV_DIR           ?= ${ROOT_DIR}/testvectors/nopreload
@@ -71,8 +76,13 @@ else
 	RES_DIR			 ?= ${TV_DIR}/result
 endif
 
-memory_file ?= data_memory_${src_fmt}_VS${vector_size}_MX${num_compute_units}_O${num_out_buffers}_M${mdim}_K${kdim}_N${ndim}_BS${block_size}.txt
-result_file ?= result_${src_fmt}_VS${vector_size}_MX${num_compute_units}_O${num_out_buffers}_M${mdim}_K${kdim}_N${ndim}_BS${block_size}.txt
+ifeq ($(standalone), 1)
+	memory_file ?= data_memory_${standalone_input}_MX${num_compute_units}_O${num_out_buffers}_M${mdim}_N${ndim}_BS${block_size}.txt
+	result_file ?= result_${standalone_input}_MX${num_compute_units}_O${num_out_buffers}_M${mdim}_N${ndim}_BS${block_size}.txt
+else
+	memory_file ?= data_memory_${src_fmt}_VS${vector_size}_MX${num_compute_units}_O${num_out_buffers}_M${mdim}_K${kdim}_N${ndim}_BS${block_size}.txt
+	result_file ?= result_${src_fmt}_VS${vector_size}_MX${num_compute_units}_O${num_out_buffers}_M${mdim}_K${kdim}_N${ndim}_BS${block_size}.txt
+endif
 
 vlog_defs := $(foreach fmt,$(ALL_FORMATS), \
   -DEN_$(fmt)=$(if $(filter $(fmt),$(enabled_formats)),1,0) )
@@ -80,6 +90,7 @@ vlog_defs += -DMEM_FILE="\"$(MEM_DIR)/$(memory_file)\"" -DRES_FILE="\"$(RES_DIR)
 vlog_defs += -DSRC_FMT="\"$(src_fmt)\"" -DDST_FMT="\"$(dst_fmt)\""
 vlog_defs += -DVECTOR_SIZE=$(vector_size) -DNPE=$(num_compute_units) -DREUSE=$(num_out_buffers) -DNUM_PIPE_REGS=$(num_pipe_regs) -DTCDM_BW=$(tcdm_bw)
 vlog_defs += -DM=$(mdim) -DK=$(kdim) -DN=$(ndim) -DQUANTIZE_MXFP4=$(quantize_mxfp4) -DQUANTIZE_MXFP8ALT=$(quantize_mxfp8alt) -DQUANTIZE_MXFP8=$(quantize_mxfp8) -DQUANTIZE_BF16=$(quantize_bf16) -DPRELOAD=$(preload)
+vlog_defs += -DSTANDALONE=$(standalone) -DSTANDALONE_BF16=$(if $(filter BF16,$(standalone_input)),1,0)
 vlog_defs += -DPROB_STALL=$(prob_stall) -DNO_STALLS=$(no_stalls)
 ifdef preload_threshold
 	vlog_defs += -DPRELOAD_THRESHOLD=$(preload_threshold)

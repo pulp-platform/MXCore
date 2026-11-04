@@ -98,6 +98,42 @@ module mxcore_hwpe_top
   );
 
   hwpe_stream_intf_stream #(
+    .DATA_WIDTH ( MXCoreTCDMDataWidth )
+  ) engine_preload_bias (
+    .clk ( clk_i )
+  );
+
+  hwpe_stream_intf_stream #(
+    .DATA_WIDTH ( MXCoreTCDMDataWidth )
+  ) standalone_fp32_input (
+    .clk ( clk_i )
+  );
+
+  hwpe_stream_intf_stream #(
+    .DATA_WIDTH ( 2*MXCoreTCDMDataWidth )
+  ) standalone_bf16_input (
+    .clk ( clk_i )
+  );
+
+  hwpe_stream_intf_stream #(
+    .DATA_WIDTH ( MXCoreEngineResultDataWidth )
+  ) standalone_fp32_row (
+    .clk ( clk_i )
+  );
+
+  hwpe_stream_intf_stream #(
+    .DATA_WIDTH ( MXCoreEngineResultDataWidth )
+  ) standalone_bf16_row (
+    .clk ( clk_i )
+  );
+
+  hwpe_stream_intf_stream #(
+    .DATA_WIDTH ( MXCoreEngineResultDataWidth )
+  ) quantizer_source (
+    .clk ( clk_i )
+  );
+
+  hwpe_stream_intf_stream #(
     .DATA_WIDTH ( MXCoreQuantResultDataWidth )
   ) mxcore_mxfp8_result (
     .clk  ( clk_i )
@@ -216,22 +252,89 @@ module mxcore_hwpe_top
     .vectors_b_i    ( mxcore_vectors_b.sink         ),
     .scale_a_i      ( mxcore_engine_scale_a.sink    ),
     .scale_b_i      ( mxcore_scale_b.sink           ),
-    .preload_bias_i ( mxcore_preload_bias.sink      ),
+    .preload_bias_i ( engine_preload_bias.sink      ),
     .result_o       ( mxcore_engine_result.source   ),
     .ctrl_i         ( engine_ctrl                   ),
     .flags_o        ( engine_flags                  )
   );
 
+  // ----------------------- Standalone Quantizer Input ------------------------ //
+  logic [2*MXCoreTCDMDataWidth-1:0] standalone_bf16_wide;
+
+  assign engine_preload_bias.valid    = !engine_ctrl.quantize_standalone && mxcore_preload_bias.valid;
+  assign engine_preload_bias.data     = mxcore_preload_bias.data;
+  assign engine_preload_bias.strb     = mxcore_preload_bias.strb;
+  assign standalone_fp32_input.valid  = engine_ctrl.quantize_standalone && !engine_ctrl.standalone_input_bf16 && mxcore_preload_bias.valid;
+  assign standalone_fp32_input.data   = mxcore_preload_bias.data;
+  assign standalone_fp32_input.strb   = mxcore_preload_bias.strb;
+  assign standalone_bf16_input.valid  = engine_ctrl.quantize_standalone && engine_ctrl.standalone_input_bf16 && mxcore_preload_bias.valid;
+  assign standalone_bf16_input.data   = standalone_bf16_wide;
+  assign standalone_bf16_input.strb   = '1;
+  assign mxcore_preload_bias.ready    = !engine_ctrl.quantize_standalone  ? engine_preload_bias.ready   :
+                                        engine_ctrl.standalone_input_bf16 ? standalone_bf16_input.ready : standalone_fp32_input.ready;
+
+  generate
+    for (genvar i = 0; i < MXCoreTCDMDataWidth/16; i++) begin : gen_bf16_widen
+      assign standalone_bf16_wide[i*32+:32] = {mxcore_preload_bias.data[i*16+:16], 16'b0};
+    end
+  endgenerate
+
+  // FP32 Input Buffer
+  mxcore_hwpe_result_fifo_buffer #(
+    .InputDataWidth     ( MXCoreTCDMDataWidth         ),
+    .OutputDataWidth    ( MXCoreEngineResultDataWidth ),
+    .FifoDepth          ( 2                           )
+  ) i_standalone_fp32_buffer (
+    .clk_i    ( clk_i                         ),
+    .rst_ni   ( rst_ni                        ),
+    .clear_i  ( clear                         ),
+    .data_i   ( standalone_fp32_input.sink    ),
+    .data_o   ( standalone_fp32_row.source    )
+  );
+
+  // BF16 Input Buffer
+  generate
+    if (2*MXCoreTCDMDataWidth == MXCoreEngineResultDataWidth) begin : gen_bf16_direct
+      assign standalone_bf16_row.valid    = standalone_bf16_input.valid;
+      assign standalone_bf16_row.data     = standalone_bf16_input.data;
+      assign standalone_bf16_row.strb     = standalone_bf16_input.strb;
+      assign standalone_bf16_input.ready  = standalone_bf16_row.ready;
+    end else begin : gen_bf16_buffer
+      mxcore_hwpe_result_fifo_buffer #(
+        .InputDataWidth     ( 2*MXCoreTCDMDataWidth       ),
+        .OutputDataWidth    ( MXCoreEngineResultDataWidth ),
+        .FifoDepth          ( 2                           )
+      ) i_standalone_bf16_buffer (
+        .clk_i    ( clk_i                         ),
+        .rst_ni   ( rst_ni                        ),
+        .clear_i  ( clear                         ),
+        .data_i   ( standalone_bf16_input.sink    ),
+        .data_o   ( standalone_bf16_row.source    )
+      );
+    end
+  endgenerate
+
+  // ------------------------- Quantizer Source MUX ---------------------------- //
+  assign quantizer_source.valid     = !engine_ctrl.quantize_standalone  ? mxcore_engine_result.valid :
+                                      engine_ctrl.standalone_input_bf16 ? standalone_bf16_row.valid  : standalone_fp32_row.valid;
+  assign quantizer_source.data      = !engine_ctrl.quantize_standalone  ? mxcore_engine_result.data  :
+                                      engine_ctrl.standalone_input_bf16 ? standalone_bf16_row.data   : standalone_fp32_row.data;
+  assign quantizer_source.strb      = !engine_ctrl.quantize_standalone  ? mxcore_engine_result.strb  :
+                                      engine_ctrl.standalone_input_bf16 ? standalone_bf16_row.strb   : standalone_fp32_row.strb;
+  assign mxcore_engine_result.ready = !engine_ctrl.quantize_standalone && quantizer_source.ready;
+  assign standalone_fp32_row.ready  = engine_ctrl.quantize_standalone && !engine_ctrl.standalone_input_bf16 && quantizer_source.ready;
+  assign standalone_bf16_row.ready  = engine_ctrl.quantize_standalone && engine_ctrl.standalone_input_bf16 && quantizer_source.ready;
+
   // ------------------------ MXCore Engine Result DEMUX ----------------------- //
   assign quantize_mxfp8_any               = engine_ctrl.quantize_mxfp8 || engine_ctrl.quantize_mxfp8alt;
   assign quantize_any                     = quantize_mxfp8_any || engine_ctrl.quantize_mxfp4 || engine_ctrl.quantize_bf16;
-  assign engine_result_to_quantizer.valid = quantize_any ? mxcore_engine_result.valid : 1'b0;
-  assign engine_result_to_quantizer.data  = mxcore_engine_result.data;
-  assign engine_result_to_quantizer.strb  = mxcore_engine_result.strb;
-  assign engine_result_to_fifo.valid      = quantize_any ? 1'b0 : mxcore_engine_result.valid;
-  assign engine_result_to_fifo.data       = mxcore_engine_result.data;
-  assign engine_result_to_fifo.strb       = mxcore_engine_result.strb;
-  assign mxcore_engine_result.ready       = quantize_any ? engine_result_to_quantizer.ready : engine_result_to_fifo.ready;
+  assign engine_result_to_quantizer.valid = quantize_any ? quantizer_source.valid : 1'b0;
+  assign engine_result_to_quantizer.data  = quantizer_source.data;
+  assign engine_result_to_quantizer.strb  = quantizer_source.strb;
+  assign engine_result_to_fifo.valid      = quantize_any ? 1'b0 : quantizer_source.valid;
+  assign engine_result_to_fifo.data       = quantizer_source.data;
+  assign engine_result_to_fifo.strb       = quantizer_source.strb;
+  assign quantizer_source.ready           = quantize_any ? engine_result_to_quantizer.ready : engine_result_to_fifo.ready;
 
   // ------------------------- MX Result Quantizer ----------------------------- //
   mxcore_hwpe_block_quantizer #(

@@ -38,6 +38,8 @@ module tb_mxcore_hwpe;
   parameter bit QuantizeMXFP8    = `ifdef QUANTIZE_MXFP8 `QUANTIZE_MXFP8 `else 1 `endif;
   parameter bit QuantizeBF16     = `ifdef QUANTIZE_BF16 `QUANTIZE_BF16 `else 0 `endif;
   parameter bit Preload        = `ifdef PRELOAD `PRELOAD `else 0 `endif;
+  parameter bit Standalone     = `ifdef STANDALONE `STANDALONE `else 0 `endif;
+  parameter bit StandaloneBF16 = `ifdef STANDALONE_BF16 `STANDALONE_BF16 `else 0 `endif;
   parameter int unsigned NumJobs = `ifdef NUM_JOBS `NUM_JOBS `else 1 `endif;
 
   // Multi-Context L1 Ping-Pong Parameters
@@ -88,16 +90,17 @@ module tb_mxcore_hwpe;
   localparam int unsigned RESULT_WIDTH  = OutBF16 ? 16 : (OutMXFP8 || OutMXFP8Alt) ? SRC_WIDTH : OutMXFP4 ? FP4_SRC_WIDTH : DST_WIDTH;
 
   // Matrix Size Parameters (in Bits)
-  localparam int unsigned MAT_A_SIZE            = (`SRC_FMT == "FP4") ? MDIM*KDIM*FP4_SRC_WIDTH : MDIM*KDIM*SRC_WIDTH;
-  localparam int unsigned MAT_B_SIZE            = (`SRC_FMT == "FP4") ? KDIM*NDIM*FP4_SRC_WIDTH : KDIM*NDIM*SRC_WIDTH;
+  localparam int unsigned MAT_A_SIZE            = (Standalone == 1) ? 0 : (`SRC_FMT == "FP4") ? MDIM*KDIM*FP4_SRC_WIDTH : MDIM*KDIM*SRC_WIDTH;
+  localparam int unsigned MAT_B_SIZE            = (Standalone == 1) ? 0 : (`SRC_FMT == "FP4") ? KDIM*NDIM*FP4_SRC_WIDTH : KDIM*NDIM*SRC_WIDTH;
   localparam int unsigned NUM_SCALE_BLOCKS_K    = (`SRC_FMT == "FP4") ? ((KDIM + FP4_BLOCK_SIZE - 1) / FP4_BLOCK_SIZE) : ((KDIM + MX_BLOCK_SIZE - 1) / MX_BLOCK_SIZE);
-  localparam int unsigned MAT_SCALE_A_SIZE      = MDIM*NUM_SCALE_BLOCKS_K*SCALE_WIDTH;
-  localparam int unsigned MAT_SCALE_B_SIZE      = NDIM*NUM_SCALE_BLOCKS_K*SCALE_WIDTH;
-  localparam int unsigned MAT_PRELOAD_BIAS_SIZE = (Preload == 1) ? (MDIM*NDIM*DST_WIDTH) : 0;
+  localparam int unsigned MAT_SCALE_A_SIZE      = (Standalone == 1) ? 0 : MDIM*NUM_SCALE_BLOCKS_K*SCALE_WIDTH;
+  localparam int unsigned MAT_SCALE_B_SIZE      = (Standalone == 1) ? 0 : NDIM*NUM_SCALE_BLOCKS_K*SCALE_WIDTH;
+  localparam int unsigned PRELOAD_WIDTH         = ((Standalone == 1) && (StandaloneBF16 == 1)) ? 16 : DST_WIDTH;
+  localparam int unsigned MAT_PRELOAD_BIAS_SIZE = ((Preload == 1) || (Standalone == 1)) ? (MDIM*NDIM*PRELOAD_WIDTH) : 0;
   localparam int unsigned MAT_RESULT_SIZE       = MDIM*NDIM*RESULT_WIDTH;
   localparam int unsigned MAT_RESULT_SCALE_SIZE = MDIM*NDIM*SCALE_WIDTH/MX_BLOCK_SIZE;
 
-  localparam int unsigned MAT_C_SIZE            = (Preload == 1) ? MAT_PRELOAD_BIAS_SIZE : MAT_RESULT_SIZE;
+  localparam int unsigned MAT_C_SIZE            = ((Preload == 1) || (Standalone == 1)) ? MAT_PRELOAD_BIAS_SIZE : MAT_RESULT_SIZE;
 
   // Data Memory Size
   localparam int unsigned MAT_INPUT_SIZE        = MAT_A_SIZE + MAT_B_SIZE + MAT_SCALE_A_SIZE + MAT_SCALE_B_SIZE;
@@ -341,7 +344,7 @@ module tb_mxcore_hwpe;
 
       // MXCORE Compute
       mxcore_compute(mc_jobs[job].m, mc_jobs[job].k, mc_jobs[job].n, fpnew_pkg::RNE, fpnew_pkg::SDOTP, 0, SRC_FMT, DST_FMT, '0, '0, '0, 0,
-                     mc_jobs[job].quantize_mxfp4, mc_jobs[job].quantize_mxfp8alt, mc_jobs[job].quantize_mxfp8, mc_jobs[job].quantize_bf16, mc_jobs[job].preload,
+                     mc_jobs[job].quantize_mxfp4, mc_jobs[job].quantize_mxfp8alt, mc_jobs[job].quantize_mxfp8, mc_jobs[job].quantize_bf16, mc_jobs[job].preload, 1'b0, 1'b0,
                      mc_jobs[job].a_ptr, mc_jobs[job].b_ptr, mc_jobs[job].sa_ptr, mc_jobs[job].sb_ptr, mc_jobs[job].c_ptr, mc_jobs[job].sc_ptr, clk);
     end
   end
@@ -386,7 +389,7 @@ module tb_mxcore_hwpe;
 
     // Load Memory
     $readmemh(memory_file, tb_mxcore_hwpe.i_data_memory.memory);
-    if (Preload == 1)
+    if ((Preload == 1) || (Standalone == 1))
       for (int job = 1; job < NumJobs; job++)
         for (int w = 0; w < MAT_PRELOAD_BIAS_SIZE/32; w++)
           tb_mxcore_hwpe.i_data_memory.memory[(BASE_PTR_RESULT + job*(JOB_OUTPUT_SIZE/8))/4 + w] = tb_mxcore_hwpe.i_data_memory.memory[BASE_PTR_RESULT/4 + w];
@@ -404,7 +407,7 @@ module tb_mxcore_hwpe;
 
       // MXCORE Compute
       mxcore_compute(MDIM, KDIM, NDIM, fpnew_pkg::RNE, fpnew_pkg::SDOTP, 0, SRC_FMT, DST_FMT, '0, '0, '0, 0,
-                     QuantizeMXFP4, QuantizeMXFP8Alt, QuantizeMXFP8, QuantizeBF16, Preload,
+                     QuantizeMXFP4, QuantizeMXFP8Alt, QuantizeMXFP8, QuantizeBF16, Preload, Standalone, StandaloneBF16,
                      BASE_PTR_VECTOR_A, BASE_PTR_VECTORS_B, BASE_PTR_SCALE_A, BASE_PTR_SCALE_B,
                      BASE_PTR_RESULT + job*(JOB_OUTPUT_SIZE/8), BASE_PTR_RESULT_SCALE + job*(JOB_OUTPUT_SIZE/8), clk);
     end
@@ -457,6 +460,8 @@ module tb_mxcore_hwpe;
     input logic                     quantize_mxfp8,
     input logic                     quantize_bf16,
     input logic                     preload,
+    input logic                     quantize_standalone,
+    input logic                     standalone_input_bf16,
     input logic [31:0]              vector_a_base_ptr,
     input logic [31:0]              vectors_b_base_ptr,
     input logic [31:0]              scale_a_base_ptr,
@@ -468,7 +473,7 @@ module tb_mxcore_hwpe;
     logic [31:0] ctrl_engine_val;
 
     //  Get the Engine Control Value
-    ctrl_engine_val_compute(rnd_mode, op, op_mod, src_fmt, dst_fmt, tag, mask, aux, flush, quantize_mxfp4, quantize_mxfp8alt, quantize_mxfp8, quantize_bf16, preload, ctrl_engine_val);
+    ctrl_engine_val_compute(rnd_mode, op, op_mod, src_fmt, dst_fmt, tag, mask, aux, flush, quantize_mxfp4, quantize_mxfp8alt, quantize_mxfp8, quantize_bf16, preload, quantize_standalone, standalone_input_bf16, ctrl_engine_val);
     $display(" - MXCore Engine Control Register: 0x%0h", ctrl_engine_val);
 
     // Program MXCore
@@ -495,9 +500,13 @@ module tb_mxcore_hwpe;
     input  logic                    quantize_mxfp8,
     input  logic                    quantize_bf16,
     input  logic                    preload,
+    input  logic                    quantize_standalone,
+    input  logic                    standalone_input_bf16,
     output logic [31:0]             ctrl_engine_val
   );
-    ctrl_engine_val[31:27]  = '0;
+    ctrl_engine_val[31:29]  = '0;
+    ctrl_engine_val[28]     = standalone_input_bf16;
+    ctrl_engine_val[27]     = quantize_standalone;
     ctrl_engine_val[26]     = preload;
     ctrl_engine_val[25]     = 1'b0;
     ctrl_engine_val[24]     = quantize_bf16;
@@ -626,7 +635,7 @@ module tb_mxcore_hwpe;
     inner_blocks_val            = (`SRC_FMT == "FP4") ? ((KDIM + FP4_BLOCK_SIZE - 1) / FP4_BLOCK_SIZE) : ((KDIM + MX_BLOCK_SIZE - 1) / MX_BLOCK_SIZE);
     a_tile_size_val             = (`SRC_FMT == "FP4") ? (REUSE*VECTOR_SIZE*FP4_SRC_WIDTH) : (REUSE*VECTOR_SIZE*SRC_WIDTH);
     b_tile_size_val             = (`SRC_FMT == "FP4") ? (VECTOR_SIZE*NPE*FP4_SRC_WIDTH) : (VECTOR_SIZE*NPE*SRC_WIDTH);
-    preload_tile_size_val       = NPE*REUSE*DST_WIDTH;
+    preload_tile_size_val       = NPE*REUSE*PRELOAD_WIDTH;
     result_tile_size_val        = NPE*REUSE*RESULT_WIDTH;
     result_scale_tile_size_val  = (NPE/MX_BLOCK_SIZE)*REUSE*SCALE_WIDTH;
     iter_count_val              = (`SRC_FMT == "FP4") ? ((KDIM*REUSE)/(2*VECTOR_SIZE)) : ((KDIM*REUSE)/VECTOR_SIZE);

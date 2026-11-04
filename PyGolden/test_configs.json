@@ -2859,6 +2859,540 @@
       "vector_size": 32,
       "npe": 32,
       "reuse": 64,
+      "data_type": "FP8",
+      "M": 64,
+      "K": 32,
+      "N": 32,
+      "quantize": 1,
+      "no_stalls": 0,
+      "standalone": 1,
+      "standalone_input": "FP32",
+      "tags": [
+        "ci",
+        "standalone"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 64,
+      "K": 32,
+      "N": 32,
+      "quantize": 1,
+      "no_stalls": 1,
+      "standalone": 1,
+      "standalone_input": "FP32",
+      "tags": [
+        "ci",
+        "standalone"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 32,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 0,
+      "standalone": 1,
+      "standalone_input": "FP32",
+      "tags": [
+        "ci",
+        "standalone"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 32,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 1,
+      "standalone": 1,
+      "standalone_input": "FP32",
+      "tags": [
+        "ci",
+        "standalone"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 64,
+      "K": 32,
+      "N": 32,
+      "quantize": 0,
+      "quantize_mxfp8alt": 1,
+      "no_stalls": 0,
+      "standalone": 1,
+      "standalone_input": "FP32",
+      "tags": [
+        "ci",
+        "standalone"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 64,
+      "K": 32,
+      "N": 32,
+      "quantize": 0,
+      "quantize_mxfp8alt": 1,
+      "no_stalls": 1,
+      "standalone": 1,
+      "standalone_input": "FP32",
+      "tags": [
+        "ci",
+        "standalone"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 32,
+      "N": 128,
+      "quantize": 0,
+      "quantize_mxfp8alt": 1,
+      "no_stalls": 0,
+      "standalone": 1,
+      "standalone_input": "FP32",
+      "tags": [
+        "ci",
+        "standalone"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 32,
+      "N": 128,
+      "quantize": 0,
+      "quantize_mxfp8alt": 1,
+      "no_stalls": 1,
+      "standalone": 1,
+      "standalone_input": "FP32",
+      "tags": [
+        "ci",
+        "standalone"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 64,
+      "K": 32,
+      "N": 32,
+      "quantize": 0,
+      "quantize_mxfp4": 1,
+      "no_stalls": 0,
+      "standalone": 1,
+      "standalone_input": "FP32",
+      "tags": [
+        "ci",
+        "standalone"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 64,
+      "K": 32,
+      "N": 32,
+      "quantize": 0,
+      "quantize_mxfp4": 1,
+      "no_stalls": 1,
+      "standalone": 1,
+      "standalone_input": "FP32",
+      "tags": [
+        "ci",
+        "standalone"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 32,
+      "N": 128,
+      "quantize": 0,
+      "quantize_mxfp4": 1,
+      "no_stalls": 0,
+      "standalone": 1,
+      "standalone_input": "FP32",
+      "tags": [
+        "ci",
+        "standalone"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 32,
+      "N": 128,
+      "quantize": 0,
+      "quantize_mxfp4": 1,
+      "no_stalls": 1,
+      "standalone": 1,
+      "standalone_input": "FP32",
+      "tags": [
+        "ci",
+        "standalone"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 64,
+      "K": 32,
+      "N": 32,
+      "quantize": 0,
+      "quantize_bf16": 1,
+      "no_stalls": 0,
+      "standalone": 1,
+      "standalone_input": "FP32",
+      "tags": [
+        "ci",
+        "standalone"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 64,
+      "K": 32,
+      "N": 32,
+      "quantize": 0,
+      "quantize_bf16": 1,
+      "no_stalls": 1,
+      "standalone": 1,
+      "standalone_input": "FP32",
+      "tags": [
+        "ci",
+        "standalone"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 32,
+      "N": 128,
+      "quantize": 0,
+      "quantize_bf16": 1,
+      "no_stalls": 0,
+      "standalone": 1,
+      "standalone_input": "FP32",
+      "tags": [
+        "ci",
+        "standalone"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 32,
+      "N": 128,
+      "quantize": 0,
+      "quantize_bf16": 1,
+      "no_stalls": 1,
+      "standalone": 1,
+      "standalone_input": "FP32",
+      "tags": [
+        "ci",
+        "standalone"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 32,
+      "N": 128,
+      "quantize": 0,
+      "quantize_mxfp4": 1,
+      "no_stalls": 0,
+      "num_jobs": 2,
+      "standalone": 1,
+      "standalone_input": "FP32",
+      "tags": [
+        "ci",
+        "standalone"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 64,
+      "K": 32,
+      "N": 32,
+      "quantize": 1,
+      "no_stalls": 0,
+      "standalone": 1,
+      "standalone_input": "BF16",
+      "tags": [
+        "ci",
+        "standalone"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 64,
+      "K": 32,
+      "N": 32,
+      "quantize": 1,
+      "no_stalls": 1,
+      "standalone": 1,
+      "standalone_input": "BF16",
+      "tags": [
+        "ci",
+        "standalone"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 32,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 0,
+      "standalone": 1,
+      "standalone_input": "BF16",
+      "tags": [
+        "ci",
+        "standalone"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 32,
+      "N": 128,
+      "quantize": 1,
+      "no_stalls": 1,
+      "standalone": 1,
+      "standalone_input": "BF16",
+      "tags": [
+        "ci",
+        "standalone"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 64,
+      "K": 32,
+      "N": 32,
+      "quantize": 0,
+      "quantize_mxfp8alt": 1,
+      "no_stalls": 0,
+      "standalone": 1,
+      "standalone_input": "BF16",
+      "tags": [
+        "ci",
+        "standalone"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 64,
+      "K": 32,
+      "N": 32,
+      "quantize": 0,
+      "quantize_mxfp8alt": 1,
+      "no_stalls": 1,
+      "standalone": 1,
+      "standalone_input": "BF16",
+      "tags": [
+        "ci",
+        "standalone"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 32,
+      "N": 128,
+      "quantize": 0,
+      "quantize_mxfp8alt": 1,
+      "no_stalls": 0,
+      "standalone": 1,
+      "standalone_input": "BF16",
+      "tags": [
+        "ci",
+        "standalone"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 32,
+      "N": 128,
+      "quantize": 0,
+      "quantize_mxfp8alt": 1,
+      "no_stalls": 1,
+      "standalone": 1,
+      "standalone_input": "BF16",
+      "tags": [
+        "ci",
+        "standalone"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 64,
+      "K": 32,
+      "N": 32,
+      "quantize": 0,
+      "quantize_mxfp4": 1,
+      "no_stalls": 0,
+      "standalone": 1,
+      "standalone_input": "BF16",
+      "tags": [
+        "ci",
+        "standalone"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 64,
+      "K": 32,
+      "N": 32,
+      "quantize": 0,
+      "quantize_mxfp4": 1,
+      "no_stalls": 1,
+      "standalone": 1,
+      "standalone_input": "BF16",
+      "tags": [
+        "ci",
+        "standalone"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 32,
+      "N": 128,
+      "quantize": 0,
+      "quantize_mxfp4": 1,
+      "no_stalls": 0,
+      "standalone": 1,
+      "standalone_input": "BF16",
+      "tags": [
+        "ci",
+        "standalone"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 32,
+      "N": 128,
+      "quantize": 0,
+      "quantize_mxfp4": 1,
+      "no_stalls": 1,
+      "standalone": 1,
+      "standalone_input": "BF16",
+      "tags": [
+        "ci",
+        "standalone"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
+      "data_type": "FP8",
+      "M": 128,
+      "K": 32,
+      "N": 128,
+      "quantize": 0,
+      "quantize_mxfp4": 1,
+      "no_stalls": 0,
+      "num_jobs": 2,
+      "standalone": 1,
+      "standalone_input": "BF16",
+      "tags": [
+        "ci",
+        "standalone"
+      ]
+    },
+    {
+      "vector_size": 32,
+      "npe": 32,
+      "reuse": 64,
       "data_type": "FP4",
       "M": 128,
       "K": 128,

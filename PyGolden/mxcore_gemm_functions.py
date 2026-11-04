@@ -295,33 +295,19 @@ def write_to_memory_file(fp9_matrix_a, fp9_matrix_b, scale_matrix_a, scale_matri
     # ---------- Write MX (MXFP8 E5M2 / E4M3, MXFP4 E2M1) Result Matrices -----------#
     n_quantizer = max(1, num_compute_units // result_mx_block_size)
 
+    mx_segments = []
+    for row_start in row_tiles:
+        for col_start in col_tiles:
+            n_cols = cols_in_tile(col_start)
+            for i in range(rows_in_tile(row_start)):
+                row_idx = row_start + i
+                for q in range(n_quantizer):
+                    q_start = q * result_mx_block_size
+                    q_cols = min(result_mx_block_size, n_cols - q_start)
+                    mx_segments.append([_acc_to_fp32_u32(result_matrix[row_idx][col_start + q_start + j]) for j in range(q_cols)])
+
     def mx_result_lines(out_fmt):
-        quantize_fn = {"FP8": quantize_e5m2, "FP8ALT": quantize_e4m3, "FP4": quantize_e2m1}[out_fmt]
-        nan_code = {"FP8": 0x7D, "FP8ALT": 0x7F, "FP4": 0x0}[out_fmt]
-        all_data = []
-        all_scales = []
-        for row_start in row_tiles:
-            for col_start in col_tiles:
-                n_cols = cols_in_tile(col_start)
-                for i in range(rows_in_tile(row_start)):
-                    row_idx = row_start + i
-                    for q in range(n_quantizer):
-                        q_start = q * result_mx_block_size
-                        q_cols = min(result_mx_block_size, n_cols - q_start)
-                        segment = [_acc_to_fp32_u32(result_matrix[row_idx][col_start + q_start + j]) for j in range(q_cols)]
-                        block_fp32 = segment + [0] * (result_mx_block_size - q_cols)
-                        scale, poisoned = block_scale(block_fp32, data_type=out_fmt)
-                        if poisoned and block_poison_enable:
-                            quantized_all = [nan_code] * len(block_fp32)
-                            scale = 0xFF if out_fmt == "FP4" else scale
-                        else:
-                            quantized_all = [quantize_fn(v, scale) for v in block_fp32]
-                        all_data.extend(quantized_all[:q_cols])
-                        all_scales.append(scale)
-        if out_fmt == "FP4":
-            all_data = all_data + [0] * (len(all_data) % 2)
-            all_data = [all_data[k] | (all_data[k + 1] << 4) for k in range(0, len(all_data), 2)]
-        return pack_uint8_to_lines(all_data) + pack_uint8_to_lines(all_scales)
+        return quantize_mx_segments(mx_segments, out_fmt, result_mx_block_size, block_poison_enable, bytes_per_line)
 
     result_mx_lines.extend(mx_result_lines("FP8"))
     result_mxfp8alt_lines = mx_result_lines("FP8ALT")

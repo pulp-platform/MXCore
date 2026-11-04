@@ -79,10 +79,7 @@ def quantize_bf16(fp32_bits):
     rounded = fp32_bits + 0x7FFF + ((fp32_bits >> 16) & 1)
     return (rounded >> 16) & 0xFFFF
 
-def quantize_result_to_bf16(res_file, res_bf16_file, memory_data_width=32):
-    with open(res_file) as f:
-        fp32_words = [int(line.strip(), 16) for line in f if line.strip()]
-    halfwords = [quantize_bf16(w) for w in fp32_words]
+def pack_halfwords_to_lines(halfwords, memory_data_width=32):
     halfwords_per_line = memory_data_width // 16
     lines = []
     for k in range(0, len(halfwords), halfwords_per_line):
@@ -90,6 +87,12 @@ def quantize_result_to_bf16(res_file, res_bf16_file, memory_data_width=32):
         group += [0] * (halfwords_per_line - len(group))
         word = sum(h << (16 * j) for j, h in enumerate(group))
         lines.append(f"{word:0{memory_data_width // 4}x}")
+    return lines
+
+def quantize_result_to_bf16(res_file, res_bf16_file, memory_data_width=32):
+    with open(res_file) as f:
+        fp32_words = [int(line.strip(), 16) for line in f if line.strip()]
+    lines = pack_halfwords_to_lines([quantize_bf16(w) for w in fp32_words], memory_data_width)
     with open(res_bf16_file, "w") as f:
         for line in lines:
             f.write(line + "\n")
@@ -243,6 +246,36 @@ def quantize_e4m3(fp32_val, scale):
 def quantize_e2m1(fp32_val, scale):
     return _quantize_mx(fp32_val, scale, mant_bits=1, exp_bits=2, bias=1, exp_max=2, exp_min=0,
                         sat_byte=0x7, nan_byte=0x0, reserved="none")
+
+def pack_bytes_to_lines(byte_list, bytes_per_line=4):
+    lines = []
+    for k in range(0, len(byte_list), bytes_per_line):
+        group = byte_list[k:k + bytes_per_line]
+        group = group + [0] * (bytes_per_line - len(group))
+        word = sum(b << (8 * j) for j, b in enumerate(group))
+        lines.append(f"{word:08x}")
+    return lines
+
+def quantize_mx_segments(segments, out_fmt, block_size=32, block_poison_enable=False, bytes_per_line=4):
+    """Quantize FP32 word segments (each <= block_size words, one MX block) to MXFP8 (FP8/FP8ALT) or MXFP4 (FP4) memory lines: data | scales."""
+    quantize_fn = {"FP8": quantize_e5m2, "FP8ALT": quantize_e4m3, "FP4": quantize_e2m1}[out_fmt]
+    nan_code = {"FP8": 0x7D, "FP8ALT": 0x7F, "FP4": 0x0}[out_fmt]
+    all_data = []
+    all_scales = []
+    for segment in segments:
+        block_fp32 = list(segment) + [0] * (block_size - len(segment))
+        scale, poisoned = block_scale(block_fp32, data_type=out_fmt)
+        if poisoned and block_poison_enable:
+            quantized_all = [nan_code] * len(block_fp32)
+            scale = 0xFF if out_fmt == "FP4" else scale
+        else:
+            quantized_all = [quantize_fn(v, scale) for v in block_fp32]
+        all_data.extend(quantized_all[:len(segment)])
+        all_scales.append(scale)
+    if out_fmt == "FP4":
+        all_data = all_data + [0] * (len(all_data) % 2)
+        all_data = [all_data[k] | (all_data[k + 1] << 4) for k in range(0, len(all_data), 2)]
+    return pack_bytes_to_lines(all_data, bytes_per_line) + pack_bytes_to_lines(all_scales, bytes_per_line)
 
 def format_matrix_A(matrix, name, vector_size=8, memory_data_width=32, data_type="FP8"):
         """Pretty-print Matrix A rows using same packing as memory_lines"""

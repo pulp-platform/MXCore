@@ -123,7 +123,9 @@ module mxcore_hwpe_ctrl
     ctrl_engine_o.quantize_mxfp8          = ctrl_output_q.quantize_mxfp8;
     ctrl_engine_o.quantize_bf16           = ctrl_output_q.quantize_bf16;
     ctrl_engine_o.block_poison_enable     = ctrl_output_q.block_poison_enable;
-    ctrl_engine_o.preload                 = reg_file.hwpe_params[MXCoreRegCtrlEngine][26];
+    ctrl_engine_o.preload                 = reg_file.hwpe_params[MXCoreRegCtrlEngine][26] && !job_output.quantize_standalone;
+    ctrl_engine_o.quantize_standalone     = ctrl_output_q.quantize_standalone;
+    ctrl_engine_o.standalone_input_bf16   = ctrl_output_q.standalone_input_bf16;
     ctrl_engine_o.iter_count              = ITER_COUNT[15:0];
     ctrl_engine_o.sbmat_lt_bw             = SBMAT_LT_BW;
     ctrl_engine_o.compute_en              = !ctrl_engine_o.preload || !preload_wait_q;
@@ -229,6 +231,8 @@ module mxcore_hwpe_ctrl
     job_output.quantize_mxfp8           = reg_file.hwpe_params[MXCoreRegCtrlEngine][24:23] == 2'b01;
     job_output.quantize_bf16            = reg_file.hwpe_params[MXCoreRegCtrlEngine][24];
     job_output.block_poison_enable      = reg_file.hwpe_params[MXCoreRegCtrlEngine][25];
+    job_output.quantize_standalone      = reg_file.hwpe_params[MXCoreRegCtrlEngine][27];
+    job_output.standalone_input_bf16    = reg_file.hwpe_params[MXCoreRegCtrlEngine][28];
     job_output.result_scale_tot_pushes  = TOT_TILES * Reuse;
     job_output.result_addr              = result_addr;
     job_output.result_scale_addr        = result_scale_addr;
@@ -248,11 +252,13 @@ module mxcore_hwpe_ctrl
   logic         quantize_mx;
 
   assign last_tile          = (tile_count_q == TOT_TILES - 1);
-  assign compute_done       = flags_engine_i.tile_end && last_tile;
+  assign compute_done       = job_output.quantize_standalone ? flags_streamer_i.preload_bias_source_flags.done : (flags_engine_i.tile_end && last_tile);
   assign next_context       = (counter_pending > 1);
   assign quantize_mx        = ctrl_output_q.quantize_mxfp8 || ctrl_output_q.quantize_mxfp8alt || ctrl_output_q.quantize_mxfp4;
-  assign output_compatible  = ({job_output.quantize_mxfp4, job_output.quantize_mxfp8alt, job_output.quantize_mxfp8, job_output.quantize_bf16, job_output.block_poison_enable} ==
-                               {ctrl_output_q.quantize_mxfp4, ctrl_output_q.quantize_mxfp8alt, ctrl_output_q.quantize_mxfp8, ctrl_output_q.quantize_bf16, ctrl_output_q.block_poison_enable});
+  assign output_compatible  = ({job_output.quantize_mxfp4, job_output.quantize_mxfp8alt, job_output.quantize_mxfp8, job_output.quantize_bf16, job_output.block_poison_enable,
+                                job_output.quantize_standalone, job_output.standalone_input_bf16} ==
+                               {ctrl_output_q.quantize_mxfp4, ctrl_output_q.quantize_mxfp8alt, ctrl_output_q.quantize_mxfp8, ctrl_output_q.quantize_bf16, ctrl_output_q.block_poison_enable,
+                                ctrl_output_q.quantize_standalone, ctrl_output_q.standalone_input_bf16});
   assign sources_ready      = flags_streamer_i.vector_a_source_flags.ready_start && flags_streamer_i.vectors_b_source_flags.ready_start && flags_streamer_i.scale_a_source_flags.ready_start && flags_streamer_i.scale_b_source_flags.ready_start && flags_streamer_i.preload_bias_source_flags.ready_start;
   assign output_done        = (data_drained_q || flags_streamer_i.result_sink_flags.done) && (!quantize_mx || scale_drained_q || flags_streamer_i.result_scale_sink_flags.done) && flags_fifo_i.empty;
 
@@ -334,11 +340,11 @@ module mxcore_hwpe_ctrl
       scale_drained_d = 1'b0;
     end
 
-    ctrl_streamer_o.vector_a_source_ctrl.req_start      = start_job;
-    ctrl_streamer_o.vectors_b_source_ctrl.req_start     = start_job;
-    ctrl_streamer_o.scale_a_source_ctrl.req_start       = start_job;
-    ctrl_streamer_o.scale_b_source_ctrl.req_start       = start_job;
-    ctrl_streamer_o.preload_bias_source_ctrl.req_start  = start_job && ctrl_engine_o.preload;
+    ctrl_streamer_o.vector_a_source_ctrl.req_start      = start_job && !job_output.quantize_standalone;
+    ctrl_streamer_o.vectors_b_source_ctrl.req_start     = start_job && !job_output.quantize_standalone;
+    ctrl_streamer_o.scale_a_source_ctrl.req_start       = start_job && !job_output.quantize_standalone;
+    ctrl_streamer_o.scale_b_source_ctrl.req_start       = start_job && !job_output.quantize_standalone;
+    ctrl_streamer_o.preload_bias_source_ctrl.req_start  = start_job && (ctrl_engine_o.preload || job_output.quantize_standalone);
     ctrl_streamer_o.result_sink_ctrl.req_start          = arm_output_q;
     ctrl_streamer_o.result_scale_sink_ctrl.req_start    = arm_output_q && quantize_mx;
 

@@ -21,7 +21,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from PyGolden.tests import gemm_mxcore_vector_gen, gemm_mxcore_multi_job_gen
+from PyGolden.tests import gemm_mxcore_vector_gen, gemm_mxcore_multi_job_gen, quantizer_standalone_gen
 from PyGolden import mxcore_gemm_functions
 
 # ── Colour helpers (ANSI) ────────────────────────────────────────────────────
@@ -148,8 +148,14 @@ def _tv_dir(preload):
 
 
 def _shape_tag(t, defaults):
+    if t.get("standalone", 0):
+        return f"{t['standalone_input']}_MX{t['npe']}_O{t['reuse']}_M{t['M']}_N{t['N']}_BS{defaults['block_size']}"
     return (f"{t['data_type']}_VS{t['vector_size']}_MX{t['npe']}_O{t['reuse']}"
             f"_M{t['M']}_K{t['K']}_N{t['N']}_BS{defaults['block_size']}")
+
+
+def _standalone_tv_dir(t):
+    return TV_ROOT / "standalone" / t["standalone_input"]
 
 
 RESULT_DIRS = {"FP32": "result", "BF16": "result_bf16", "MXFP8": "result_mx", "MXFP8ALT": "result_mxfp8alt", "MXFP4": "result_mxfp4"}
@@ -194,7 +200,22 @@ def generate_testvectors(tests, defaults):
             num_out_buffers=t["reuse"],
             block_size=defaults["block_size"],
         )
-    shapes = {(t["data_type"], t["vector_size"], t["npe"], t["reuse"], t["M"], t["K"], t["N"], t.get("preload", 0)) for t in tests if not t.get("jobs_file", 0)}
+    for t in [t for t in tests if t.get("standalone", 0)]:
+        tag = _shape_tag(t, defaults)
+        tv_dir = _standalone_tv_dir(t)
+        if (tv_dir / "memory" / f"data_memory_{tag}.txt").exists() and all((tv_dir / d / f"result_{tag}.txt").exists() for d in RESULT_DIRS.values()):
+            continue
+        print(f"{C_DIM}Generating standalone quantizer test vectors {tag}...{C_RESET}", file=sys.stderr)
+        quantizer_standalone_gen(
+            folder_path=str(TV_ROOT),
+            input_fmt=t["standalone_input"],
+            mdim=t["M"], ndim=t["N"],
+            num_mx_units=t["npe"],
+            num_out_buffers=t["reuse"],
+            block_size=defaults["block_size"],
+            seed=MAIN_SEED,
+        )
+    shapes = {(t["data_type"], t["vector_size"], t["npe"], t["reuse"], t["M"], t["K"], t["N"], t.get("preload", 0)) for t in tests if not t.get("jobs_file", 0) and not t.get("standalone", 0)}
     mxcore_gemm_functions.MEMORY_EXPORT = True
     for data_type, vs, npe, reuse, M, K, N, preload in sorted(shapes):
         tag = f"{data_type}_VS{vs}_MX{npe}_O{reuse}_M{M}_K{K}_N{N}_BS{defaults['block_size']}"
@@ -226,8 +247,10 @@ def generate_compile_tcl(cfg, defaults, workdir):
     vs, npe, reuse = cfg["vector_size"], cfg["npe"], cfg["reuse"]
     data_type = cfg["data_type"]
     preload = cfg.get("preload", 0)
+    standalone = cfg.get("standalone", 0)
+    standalone_bf16 = int(standalone and cfg["standalone_input"] == "BF16")
     tag = _shape_tag(cfg, defaults)
-    tv_dir = _tv_dir(preload)
+    tv_dir = _standalone_tv_dir(cfg) if standalone else _tv_dir(preload)
 
     mem_file = str(tv_dir / "memory"  / f"data_memory_{tag}.txt")
     res_file = str(tv_dir / RESULT_DIRS[_output_fmt(cfg)] / f"result_{tag}.txt")
@@ -259,6 +282,8 @@ def generate_compile_tcl(cfg, defaults, workdir):
         "--define", f"QUANTIZE_MXFP8={quantize}",
         "--define", f"QUANTIZE_BF16={quantize_bf16}",
         "--define", f"PRELOAD={preload}",
+        "--define", f"STANDALONE={standalone}",
+        "--define", f"STANDALONE_BF16={standalone_bf16}",
         "--define", f"PROB_STALL={defaults['prob_stall']}",
         "--define", f"NO_STALLS={cfg['no_stalls']}",
         "--define", f"NUM_JOBS={cfg.get('num_jobs', 1)}",
@@ -302,6 +327,9 @@ def run_test(cfg, defaults):
     q_str = {"FP32": "FP32", "BF16": "BF16", "MXFP8": "MX", "MXFP8ALT": "MX8ALT", "MXFP4": "MX4"}[output_fmt]
     stall_str = "stall" if cfg["no_stalls"] == 0 else "nostall"
     name = f"{data_type}_VS{vs}_MX{npe}_O{reuse}_M{M}_K{K}_N{N}_{q_str}_{stall_str}"
+    if cfg.get("standalone", 0):
+        data_type = cfg["standalone_input"]
+        name = f"SQ_{data_type}_MX{npe}_O{reuse}_M{M}_N{N}_{q_str}_{stall_str}"
     if cfg.get("preload", 0):
         name += "_preload"
     if cfg.get("num_jobs", 1) > 1:
@@ -322,7 +350,7 @@ def run_test(cfg, defaults):
         "vector_size": vs, "npe": npe, "reuse": reuse, "data_type": data_type,
         "no_stalls": cfg["no_stalls"],
         "preload": cfg.get("preload", 0), "num_jobs": cfg.get("num_jobs", 1), "jobs_file": cfg.get("jobs_file", 0),
-        "quantize": quantize, "quantize_bf16": quantize_bf16, "output_fmt": output_fmt, "tile_mode": tile_mode,
+        "quantize": quantize, "quantize_bf16": quantize_bf16, "output_fmt": output_fmt, "standalone": cfg.get("standalone", 0), "tile_mode": tile_mode,
         "status": "UNKNOWN", "reason": "",
     }
 
@@ -462,9 +490,13 @@ def print_results(results):
         "BF16": "BF16 Quantized Output Results",
     }
     for output_fmt, title in titles.items():
-        subset = [r for r in results if r["output_fmt"] == output_fmt]
+        subset = [r for r in results if r["output_fmt"] == output_fmt and not r["standalone"]]
         if subset:
             _print_table(title, subset)
+    for output_fmt, title in titles.items():
+        subset = [r for r in results if r["output_fmt"] == output_fmt and r["standalone"]]
+        if subset:
+            _print_table(f"Standalone Quantizer: {title}", subset)
 
     # Summary
     total = len(results)

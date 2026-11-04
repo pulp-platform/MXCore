@@ -1,10 +1,11 @@
 import argparse
 import os
+import random
 from pathlib import Path
 
 from . import utils
 from . import fp_functions
-from .mxcore_utils import quantize_result_to_bf16
+from .mxcore_utils import quantize_result_to_bf16, quantize_bf16, pack_halfwords_to_lines, quantize_mx_segments
 
 from .mxcore_gemm_tests import *
 from . import mxcore_gemm_functions
@@ -202,6 +203,63 @@ def gemm_mxcore_multi_job_gen(jobs, name, folder_path=default_path, l1_kib=128, 
     for r in rows:
         print(f"  Job {r[0]}: half {r[1]}, {r[2]}x{r[3]}x{r[4]}, footprint {r[17]} B ({100.0 * r[17] / half_bytes:.2f} % of L1/2)")
     return manifest
+
+
+def _random_fp32_block(rng, block_size):
+    base_exp = rng.randint(1, 254)
+    words = []
+    for _ in range(block_size):
+        sign = rng.getrandbits(1) << 31
+        r = rng.random()
+        if r < 0.01:
+            words.append(sign)
+        elif r < 0.02:
+            words.append(sign | rng.randint(1, 0x7FFFFF))
+        elif r < 0.021:
+            words.append(sign | 0x7F800000)
+        elif r < 0.022:
+            words.append(sign | 0x7FC00000 | rng.getrandbits(22))
+        else:
+            exp = min(254, max(1, base_exp - rng.randint(0, 40)))
+            words.append(sign | (exp << 23) | rng.getrandbits(23))
+    return words
+
+
+def quantizer_standalone_gen(folder_path=default_path, input_fmt="FP32", mdim=128, ndim=128, num_mx_units=32, num_out_buffers=64, block_size=32, seed=None, memory_data_width=32):
+    rng = random.Random(seed)
+    words = []
+    for _ in range(mdim * ndim // block_size):
+        words.extend(_random_fp32_block(rng, block_size))
+    if input_fmt == "BF16":
+        words = [(w & 0xFFFF0000) | (0x00400000 if ((w >> 23) & 0xFF) == 0xFF and (w & 0x7FFFFF) else 0) for w in words]
+
+    folder = os.path.join(folder_path, "standalone", input_fmt)
+    tag = f"{input_fmt}_MX{num_mx_units}_O{num_out_buffers}_M{mdim}_N{ndim}_BS{block_size}"
+    bytes_per_line = memory_data_width // 8
+    segments = [words[k:k + block_size] for k in range(0, len(words), block_size)]
+
+    if input_fmt == "BF16":
+        memory_lines = pack_halfwords_to_lines([w >> 16 for w in words], memory_data_width)
+    else:
+        memory_lines = [f"{w:08x}" for w in words]
+    outputs = {
+        "memory":          ("memory/data_memory", memory_lines),
+        "result":          ("result/result", [f"{w:08x}" for w in words]),
+        "result_bf16":     ("result_bf16/result", pack_halfwords_to_lines([quantize_bf16(w) for w in words], memory_data_width)),
+        "result_mx":       ("result_mx/result", quantize_mx_segments(segments, "FP8", block_size, False, bytes_per_line)),
+        "result_mxfp8alt": ("result_mxfp8alt/result", quantize_mx_segments(segments, "FP8ALT", block_size, False, bytes_per_line)),
+        "result_mxfp4":    ("result_mxfp4/result", quantize_mx_segments(segments, "FP4", block_size, False, bytes_per_line)),
+    }
+
+    files = {}
+    for key, (prefix, lines) in outputs.items():
+        path = os.path.join(folder, f"{prefix}_{tag}.txt")
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w") as f:
+            for line in lines:
+                f.write(line + "\n")
+        files[key] = path
+    return files
 
 
 if __name__ == "__main__":

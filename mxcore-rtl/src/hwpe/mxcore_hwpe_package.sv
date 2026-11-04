@@ -61,6 +61,8 @@ package mxcore_hwpe_package;
     logic                     quantize_bf16; // (1)           // REG_CTRL_ENGINE[24]
     logic                     block_poison_enable; // (1)     // REG_CTRL_ENGINE[25]
     logic                     preload; // (1)                 // REG_CTRL_ENGINE[26]
+    logic                     quantize_standalone; // (1)     // REG_CTRL_ENGINE[27]
+    logic                     standalone_input_bf16; // (1)   // REG_CTRL_ENGINE[28]
     logic [15:0]              iter_count;                     // REG_ITER_COUNT: per-output-tile iteration count
     logic                     sbmat_lt_bw;                    // If Scale B Matrix is smaller than TCDM BW (a single transaction)
     logic                     compute_en;                     // Compute enable (gated by the tile preload phase)
@@ -73,6 +75,8 @@ package mxcore_hwpe_package;
     logic                     quantize_mxfp8;
     logic                     quantize_bf16;
     logic                     block_poison_enable;
+    logic                     quantize_standalone;
+    logic                     standalone_input_bf16;
     logic [31:0]              result_scale_tot_pushes;
     logic [31:0]              result_addr;
     logic [31:0]              result_scale_addr;
